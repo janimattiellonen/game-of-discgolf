@@ -1,7 +1,12 @@
 import {
+  ARC_BASE,
+  ARC_MAX,
+  ARC_PER_D,
   CATCH_H,
   CATCH_R,
   CATCH_SPEED,
+  DUR_BASE,
+  DUR_PER_D,
   SIG_A0,
   SIG_A1,
   SIG_D0,
@@ -28,8 +33,8 @@ export const sigA = (disc: Disc, carry: number) =>
 export const sigD = (disc: Disc, carry: number) =>
   carry * (SIG_D0 + effort(carry) * (SIG_D1 - SIG_D0)) * disc.spread;
 
-export const flightDur = (d: number) => 0.35 + d * 0.075;
-export const flightArc = (d: number) => Math.min(3.2, 0.4 + d * 0.32);
+export const flightDur = (d: number) => DUR_BASE + d * DUR_PER_D;
+export const flightArc = (d: number) => Math.min(ARC_MAX, ARC_BASE + d * ARC_PER_D);
 
 /**
  * Surface sets the deceleration: water grabs the disc almost at once, grass lets it run.

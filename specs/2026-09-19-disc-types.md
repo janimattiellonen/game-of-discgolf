@@ -384,6 +384,10 @@ New, in `src/game/physics.test.ts`:
   and `m()` of those is the authored metre figure.
 - A putter's skid is shorter than a driver's from the same impact speed, and each still
   matches the closed form `v² / (2 · SKID_DECEL · grip)` on grass.
+- **The air hole-out ceiling meets the bag.** A putter and a midrange can be thrown softly
+  enough to arrive under the ~19.1 m ceiling; the driver's 20 m floor sits past it, so a
+  driver can never hole out of the air at any power. The margin is under a metre, so the
+  test says so.
 - **The fourth trade-off:** `basketEvent` itself is called — not a proxy for it — on two
   flights with an identical line and carry, the basket set 1.4 tiles past the landing so the
   disc enters the cylinder 0.85 tiles into the slide and the carry never clips the cage. The
@@ -447,7 +451,7 @@ outside the tested surface by the same rule.
       `DiscType` and `m` for the picker.
 - [x] The landing cone and the aim line reflect the selected disc; ring spacing stays 10 m and
       only the ring count varies.
-- [x] `pnpm check` is green — 61 tests, plus the 2 the Monte Carlo keeps skipped.
+- [x] `pnpm check` is green — 65 tests, plus the 2 the Monte Carlo keeps skipped.
 - [x] **Monte Carlo before the feel is signed off.** Run before any implementation existed,
       against a harness that mirrored the model; then rebuilt on the shipped functions and
       **committed** as `src/game/montecarlo.test.ts`, run with `pnpm sim` and skipped by

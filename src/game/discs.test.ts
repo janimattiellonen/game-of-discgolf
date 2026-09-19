@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FLIER_GAIN, GIMME_R } from './constants';
 import { DISCS, DISC_KEYS, DISC_TYPES, REF_D, effort, flierGain } from './discs';
 import { m } from './scale';
+import { expectAscending } from '../test-utils';
 
 const inOrder = DISC_TYPES.map((t) => DISCS[t]);
 
@@ -11,10 +12,8 @@ describe('the disc table', () => {
   });
 
   it('reaches further with every disc down the list', () => {
-    const mins = inOrder.map((d) => d.min);
-    const maxes = inOrder.map((d) => d.max);
-    expect(mins).toEqual([...mins].sort((a, b) => a - b));
-    expect(maxes).toEqual([...maxes].sort((a, b) => a - b));
+    expectAscending(inOrder.map((d) => d.min));
+    expectAscending(inOrder.map((d) => d.max));
   });
 
   /**
@@ -24,12 +23,10 @@ describe('the disc table', () => {
    * asserted rather than the numbers.
    */
   it('pays for reach in control, spread and run-out together', () => {
-    const controls = inOrder.map((d) => d.control);
-    const spreads = inOrder.map((d) => d.spread);
-    const grips = inOrder.map((d) => d.grip);
-    expect(controls).toEqual([...controls].sort((a, b) => a - b));
-    expect(spreads).toEqual([...spreads].sort((a, b) => a - b));
-    expect(grips).toEqual([...grips].sort((a, b) => b - a));
+    expectAscending(inOrder.map((d) => d.control));
+    expectAscending(inOrder.map((d) => d.spread));
+    // grip runs the other way: the disc that reaches furthest brakes least.
+    expectAscending(inOrder.map((d) => -d.grip));
   });
 
   /** Every multiplier is read against the midrange, so it has to be the literal 1.0 row. */
@@ -81,8 +78,7 @@ describe('flierGain', () => {
   });
 
   it('rises with the roll', () => {
-    const gains = [0, 0.3, 0.6, 0.9].map(flierGain);
-    expect(gains).toEqual([...gains].sort((a, b) => a - b));
+    expectAscending([0, 0.3, 0.6, 0.9].map(flierGain));
   });
 
   it('clamps a roll outside the unit range', () => {
