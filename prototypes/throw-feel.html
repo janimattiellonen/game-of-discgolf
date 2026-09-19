@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE - THROWAWAY CODE. Not production. No tests, no abstractions, no build step.
+  Double-click this file to run it.
+
+  Question 1: Is risk-priced power fun rather than frustrating?
+              (power sets distance AND scatter; there is no "correct spot" on the bar)
+  Question 2: Can an isometric camera communicate distance/elevation well enough to
+              judge "can I clear that water?"
+
+  Toggles 1-4 exist specifically to answer Q2: turn the aids off and see whether the
+  raw isometric view is still readable.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Disc golf throw-feel prototype</title>
+<style>
+  body { margin:0; background:#15181d; color:#d8dee9; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  #wrap { display:flex; gap:16px; padding:16px; align-items:flex-start; }
+  canvas { background:#0e1116; border-radius:6px; display:block; }
+  #panel { width:290px; }
+  h1 { font-size:14px; margin:0 0 4px; letter-spacing:.04em; }
+  .tag { display:inline-block; background:#b4503c; color:#fff; padding:1px 6px; border-radius:3px; font-size:10px; letter-spacing:.08em; }
+  .box { background:#1b1f26; border-radius:6px; padding:10px 12px; margin-top:10px; }
+  .row { display:flex; justify-content:space-between; gap:8px; }
+  .row span:last-child { color:#8fbcbb; }
+  .k { display:inline-block; background:#2a2f38; border-radius:3px; padding:0 5px; }
+  .muted { color:#767d89; }
+  .q { border-left:3px solid #b4503c; padding-left:8px; margin:8px 0; }
+  #log { height:110px; overflow-y:auto; white-space:pre-wrap; }
+  .mode { display:block; cursor:pointer; padding:1px 0; }
+  .mode input { vertical-align:-1px; margin:0 6px 0 0; }
+  .mode.off { color:#767d89; }
+  #tapin { display:none; width:100%; margin-top:10px; padding:8px; font:inherit; cursor:pointer;
+           background:#3f7d4a; color:#eaf3ec; border:0; border-radius:6px; letter-spacing:.04em; }
+  #tapin:hover { background:#4a9158; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="980" height="620"></canvas>
+  <div id="panel">
+    <h1>Throw feel <span class="tag">PROTOTYPE</span></h1>
+    <div class="muted">Water / OB = +1 stroke, play from where the disc last went out.</div>
+
+    <div class="box">
+      <div class="row"><span>Hole</span><span id="s-hole">-</span></div>
+      <div class="row"><span>Phase</span><span id="s-phase">-</span></div>
+      <div class="row"><span>Throws</span><span id="s-throws">0</span></div>
+      <div class="row"><span>Penalties</span><span id="s-pen">0</span></div>
+      <div class="row"><span>Distance to basket</span><span id="s-dist">-</span></div>
+      <hr style="border:0;border-top:1px solid #2a2f38">
+      <div class="row"><span>Power</span><span id="s-power">-</span></div>
+      <div class="row"><span>Throw distance</span><span id="s-tdist">-</span></div>
+      <div class="row"><span>Angle scatter &sigma;</span><span id="s-siga">-</span></div>
+      <div class="row"><span>Distance scatter &sigma;</span><span id="s-sigd">-</span></div>
+      <div class="row"><span>Tile</span><span id="s-tile">-</span></div>
+      <hr style="border:0;border-top:1px solid #2a2f38">
+      <div class="row"><span>Last error</span><span id="s-err">-</span></div>
+    </div>
+
+    <button id="tapin">Hole out (tap in)</button>
+
+    <div class="box" id="log"></div>
+
+    <div class="box">
+      <div class="muted">Aiming mode</div>
+      <label class="mode" id="m-manual"><input type="radio" name="mode" value="manual" checked> manual</label>
+      <label class="mode" id="m-timing"><input type="radio" name="mode" value="timing"> timing sweep</label>
+      <div id="keys-manual" style="margin-top:6px">
+        <div><span class="k">&larr;</span><span class="k">&rarr;</span> turn (hold <span class="k">shift</span> for fine)</div>
+        <div><span class="k">space</span> hold to charge, release to throw</div>
+        <div><span class="k">esc</span> cancel the charge</div>
+      </div>
+      <div id="keys-timing" style="margin-top:6px;display:none">
+        <div><span class="k">space</span> aim direction &rarr; aim power &rarr; throw</div>
+        <div><span class="k">esc</span> cancel the aim</div>
+      </div>
+      <div><span class="k">R</span> reset hole</div>
+      <div style="margin-top:6px" class="muted">Q2 aids - turn these OFF:</div>
+      <div><span class="k">1</span> landing cone <span id="t1">on</span></div>
+      <div><span class="k">2</span> disc shadow <span id="t2">on</span></div>
+      <div><span class="k">3</span> distance rings <span id="t3">on</span></div>
+      <div><span class="k">4</span> elevation shading <span id="t4">on</span></div>
+    </div>
+
+    <div class="box">
+      <div class="q"><b>Q1</b> Did you <i>decide</i> something, or did the game cheat you?</div>
+      <div class="q"><b>Q2</b> With <span class="k">1</span><span class="k">2</span><span class="k">3</span> off, can you still tell if you'll clear the water?</div>
+    </div>
+  </div>
+</div>
+<script>
+// ---------------------------------------------------------------- world
+const GW = 20, GH = 14;              // grid tiles
+
+// ---- scale ------------------------------------------------------------------------
+// Everything in the model is measured in TILES and every distance is Euclidean, so one
+// tile is TILE_M across its sides and TILE_M * sqrt(2) corner to corner. This single
+// constant is what turns the board into a real course: change it and every throw, ring
+// and hole length is rescaled with it. Metres are used for display only - converting the
+// model itself would just add rounding noise to the physics.
+const TILE_M = 5;                                  // metres per tile side
+const TILE_DIAG_M = TILE_M * Math.SQRT2;           // 7.07 m corner to corner
+const m = t => t * TILE_M;                         // tiles -> metres
+const tl = mm => mm / TILE_M;                      // metres -> tiles
+
+// Real courses are graded by their AVERAGE hole length. These bands are the usual ones:
+// beginner layouts sit under 60 m, elite layouts average north of 140 m.
+const CLASSES = [
+  { name: 'beginner', max: 60 },
+  { name: 'recreational', max: 85 },
+  { name: 'intermediate', max: 110 },
+  { name: 'advanced', max: 140 },
+  { name: 'pro', max: Infinity },
+];
+const classOf = metres => CLASSES.find(c => metres <= c.max).name;
+
+const TW = 56, TH = 28, HZ = 20;     // iso tile width/height, px per elevation unit
+const OX = 392, OY = 100;            // projection origin (keeps the whole grid on canvas)
+const TEE = { x: 2.5, y: 11.5 };
+const BASKET = { x: 16.5, y: 2.5 };
+const PAR = 3;
+const holeLength = () => m(Math.hypot(BASKET.x - TEE.x, BASKET.y - TEE.y));   // tee to pin, straight line
+
+// ---- holing out -------------------------------------------------------------------
+// The basket is a cylinder: radius CATCH_R, from its own ground up to CATCH_H (the drawn
+// cage top). The disc has to pass THROUGH it, and slowly enough to stay in - a hot disc
+// rattles out. Nothing about carry distance is checked; it all falls out of the path.
+const CATCH_R = 0.55;                // tiles - how close the disc has to pass
+const CATCH_H = 1.7;                 // units - cage top, matches the 34px the basket is drawn at
+const CATCH_SPEED = 6;               // tiles/s - faster than this and it bounces out
+// Inside the shortest possible throw (MIN_D) there is no shot to play: any throw overshoots.
+// That range is exactly where the tap-in button belongs.
+const GIMME_R = 1.5;
+
+// Water band with a land bridge on the right: the direct line crosses it,
+// going around costs a throw. That is the route dilemma under test.
+const isWater = (tx, ty) => ty >= 6 && ty <= 7 && tx <= 14;
+const isTee = (tx, ty) => tx === (TEE.x | 0) && ty === (TEE.y | 0);   // tee pad
+const TEE_H = 0.2;                               // a low lip, ~4px at HZ=20
+const heightAt = (tx, ty) => ty <= 3 ? 3          // raised plateau around the basket, 3 blocks up
+                           : isTee(tx, ty) ? TEE_H : 0;
+const inGrid = (tx, ty) => tx >= 0 && ty >= 0 && tx < GW && ty < GH;
+
+// The player's arm, in metres - this is the knob that defines who you are on the course.
+// 55 m at full power is a beginner's drive; intermediate is ~90 m, advanced ~110, pro 130+.
+// Raising it needs a bigger grid: a 130 m drive is 26 tiles and the board is only 20 wide.
+const DRIVE_M = 55, PUTT_M = 7.5;
+const MIN_D = tl(PUTT_M), MAX_D = tl(DRIVE_M);   // tiles, at power 0 and power 1. Monte Carlo:
+// from the tee at full power the carry clears ~55% of the time and drowns ~27%, leaving a
+// makeable approach. At 85% power it is a coin flip; below that the greedy line is simply
+// bad. So the real choice is "commit fully or go around" - which is the decision under test.
+const SIG_A0 = 3, SIG_A1 = 14;       // degrees of angular scatter, at power 0 and 1
+const SIG_D0 = 0.03, SIG_D1 = 0.12;  // fraction of throw distance
+
+// ---------------------------------------------------------------- state
+let S;
+function reset() {
+  S = {
+    phase: 'idle',        // idle | dir | power | flying | done
+    lie: { ...TEE },
+    prevLie: { ...TEE },
+    throws: 0, penalties: 0,
+    t: 0,                 // sweep clock
+    angle: 0, power: 0,   // live sweep values
+    lockedAngle: 0,
+    flight: null,
+    lastErr: '-',
+    log: [],
+  };
+  S.angle = aimBase();
+  say('New hole. ' + holeLength().toFixed(0) + ' m, par ' + PAR
+    + ' (' + classOf(holeLength()) + '). Water costs a stroke.');
+}
+const toggles = { cone: true, shadow: true, rings: true, elev: true };
+
+function say(m) { S.log.unshift(m); S.log.length = Math.min(S.log.length, 40); }
+
+// ---------------------------------------------------------------- helpers
+const proj = (x, y, h = 0) => ({ x: OX + (x - y) * TW / 2, y: OY + (x + y) * TH / 2 - h * HZ });
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
+function gauss() { // Box-Muller
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const aimBase = () => Math.atan2(BASKET.y - S.lie.y, BASKET.x - S.lie.x);
+const throwDist = p => MIN_D + p * (MAX_D - MIN_D);
+const sigA = p => SIG_A0 + p * (SIG_A1 - SIG_A0);
+const sigD = (p, d) => d * (SIG_D0 + p * (SIG_D1 - SIG_D0));
+
+// ---------------------------------------------------------------- input
+// Two aiming schemes over the same phase machine:
+//   timing - the original. space starts a direction sweep, space locks it, space stops the
+//            power bar. Everything is a reaction test.
+//   manual - arrows steer freely, then space is HELD to charge power and released to throw.
+//            Overcharging throws at max, so the pressure is "how close do I dare run it".
+// 'idle' is the aiming phase in manual mode and the waiting phase in timing mode.
+let MODE = 'manual';
+const TURN_RATE = rad(60);            // degrees/s while an arrow is held
+const FINE_TURN = 0.25;               // shift multiplier, for the last degree of a putt
+const CHARGE_TIME = 1.2;              // seconds from 0 to max power
+// Overcharge: the bar runs 1% past full, and letting it reach 100% blows the throw. The
+// 95-100% band is where the distance is, so the reward for holding on is real and so is
+// the cliff at the end of it. A blown throw still goes, it just goes badly.
+const POWER_MAX = 1.01;
+// How badly you blew it is itself a roll: one severity draw drives both multipliers, so a
+// bust is never free (both ends of both ranges are > 1) but ranges from ugly to disastrous.
+const OVER_A = [1.4, 2.2];            // angle scatter multiplier
+const OVER_D = [1.2, 2.0];            // distance scatter multiplier
+const OVER_SHORT = [0.85, 0.80];      // carry left after a bust: 15-20% of the throw is gone
+// gauss() is unbounded and the severity roll multiplies it, so the tail could put the disc
+// behind you. A shanked disc still goes roughly forward - hard cap the angular error.
+const MAX_ERR_A = rad(40);
+const lerp = (r, t) => r[0] + (r[1] - r[0]) * t;
+const held = { left: false, right: false };
+let keyShift = false;
+
+function setMode(m) {
+  MODE = m;
+  held.left = held.right = false;
+  if (S.phase === 'dir' || S.phase === 'power') { S.phase = 'idle'; S.power = 0; S.t = 0; }
+  if (S.phase === 'idle') S.angle = aimBase();
+  $('keys-manual').style.display = m === 'manual' ? '' : 'none';
+  $('keys-timing').style.display = m === 'timing' ? '' : 'none';
+  $('m-manual').classList.toggle('off', m !== 'manual');
+  $('m-timing').classList.toggle('off', m !== 'timing');
+}
+for (const el of document.querySelectorAll('input[name=mode]'))
+  el.addEventListener('change', () => { setMode(el.value); el.blur(); });
+
+addEventListener('keydown', e => {
+  keyShift = e.shiftKey;
+  if (e.code === 'KeyR') { reset(); return; }
+  if (e.code === 'Digit1') toggles.cone = !toggles.cone;
+  if (e.code === 'Digit2') toggles.shadow = !toggles.shadow;
+  if (e.code === 'Digit3') toggles.rings = !toggles.rings;
+  if (e.code === 'Digit4') toggles.elev = !toggles.elev;
+
+  // Bail out of a charge without throwing. The space keyup that follows sees phase 'idle'
+  // and does nothing, and key repeat cannot restart it - you have to press space again.
+  if (e.code === 'Escape' && (S.phase === 'dir' || S.phase === 'power')) {
+    S.phase = 'idle'; S.power = 0; S.t = 0;
+    say('Throw cancelled.');
+    return;
+  }
+
+  if (MODE === 'manual') {
+    if (e.code === 'ArrowLeft') { held.left = true; e.preventDefault(); }
+    if (e.code === 'ArrowRight') { held.right = true; e.preventDefault(); }
+    if (e.code === 'Space') {
+      e.preventDefault();                      // held space must not scroll the page
+      // Key repeat fires while it is held down; only the first press starts the charge.
+      if (!e.repeat && S.phase === 'idle') { S.lockedAngle = S.angle; S.power = 0; S.phase = 'power'; }
+    }
+    return;
+  }
+
+  if (e.code !== 'Space') return;
+  e.preventDefault();
+  if (S.phase === 'idle') { S.phase = 'dir'; S.t = 0; }
+  else if (S.phase === 'dir') { S.lockedAngle = S.angle; S.phase = 'power'; S.t = 0; }
+  else if (S.phase === 'power') release();
+});
+
+addEventListener('keyup', e => {
+  keyShift = e.shiftKey;
+  if (e.code === 'ArrowLeft') held.left = false;
+  if (e.code === 'ArrowRight') held.right = false;
+  // Releasing space throws at whatever the bar reached. Reaching max throws on its own,
+  // so by the time the key comes up the phase may already have moved on.
+  if (e.code === 'Space' && MODE === 'manual' && S.phase === 'power') release(S.power >= 1);
+});
+
+// ---------------------------------------------------------------- landing skid
+// A disc still has horizontal speed when it touches down, and kinetic friction bleeds
+// that off at a roughly constant rate. Constant deceleration means the slide length goes
+// with the SQUARE of impact speed: s = v^2 / (2a), t = v / a. That squaring is what makes
+// a hard throw run out so much further than a soft one.
+// The descent angle matters too: a disc dropping steeply plants, a flat arriving disc
+// skips. So only the along-ground component of the impact carries into the slide.
+// Ground type is ignored for now - one deceleration constant for the whole course.
+// Surface sets the deceleration: water grabs the disc almost at once, grass lets it run.
+const SKID_DECEL = 20;                            // tiles/s^2 on ground
+const WATER_DECEL = 150;                          // water: a full-power skid dies in ~0.15 tiles
+const decelAt = (x, y) => (inGrid(x | 0, y | 0) && isWater(x | 0, y | 0)) ? WATER_DECEL : SKID_DECEL;
+const flightDur = d => 0.35 + d * 0.075;
+const flightArc = d => Math.min(3.2, 0.4 + d * 0.32);
+
+function impactSpeed(d) {
+  const t = flightDur(d), vh = d / t;             // horizontal speed at touchdown
+  const vv = flightArc(d) * Math.PI / t;          // |dh/dt| at t=1 for the sine arc
+  return vh * Math.cos(Math.atan2(vv, vh));       // what survives the impact
+}
+
+// With the surface varying along the slide there is no closed form, so step it: the disc
+// is decelerated by whatever it is sliding over right now. A disc that runs off grass into
+// water stops just past the shoreline instead of gliding on across it.
+function skidPath(start, a, d) {
+  const dt = 1 / 120, samples = [0];
+  let v = impactSpeed(d), s = 0;
+  while (v > 0 && samples.length < 600) {
+    v = Math.max(0, v - decelAt(start.x + Math.cos(a) * s, start.y + Math.sin(a) * s) * dt);
+    s += v * dt;
+    samples.push(s);
+  }
+  return { dist: s, dur: (samples.length - 1) * dt, samples, dt };
+}
+
+// Where a throw of carry d along angle a comes to rest, measured from the lie.
+const restDist = (lie, a, d) =>
+  d + skidPath({ x: lie.x + Math.cos(a) * d, y: lie.y + Math.sin(a) * d }, a, d).dist;
+
+// A bounce is just another flight, so throws and bounce-outs share this. `bounced` stops a
+// disc that already rattled out from re-testing the basket on the way down.
+function startFlight(from, a, d, bounced) {
+  const to = { x: from.x + Math.cos(a) * d, y: from.y + Math.sin(a) * d };
+  const sk = skidPath(to, a, d);
+  const f = {
+    from: { ...from }, to, a, d, t: 0,
+    rest: { x: to.x + Math.cos(a) * sk.dist, y: to.y + Math.sin(a) * sk.dist },
+    skid: sk, skidDur: sk.dur,
+    dur: flightDur(d),
+    arc: bounced ? 0.25 : flightArc(d),
+    h0: heightAt(from.x | 0, from.y | 0),
+    h1: inGrid(to.x | 0, to.y | 0) ? heightAt(to.x | 0, to.y | 0) : 0,
+  };
+  f.event = bounced ? null : basketEvent(f);
+  S.flight = f;
+  S.phase = 'flying';
+}
+
+// Walk the whole path - carry then skid - and return the first moment the disc is inside
+// the basket cylinder, with the speed it is carrying at that moment.
+function basketEvent(f) {
+  const bh = toggles.elev ? heightAt(BASKET.x | 0, BASKET.y | 0) : 0;
+  const step = 1 / 240, end = f.dur + f.skidDur;
+  for (let t = 0; t <= end; t += step) {
+    let x, y, h, v;
+    if (t <= f.dur) {
+      const u = t / f.dur;
+      x = f.from.x + (f.to.x - f.from.x) * u;
+      y = f.from.y + (f.to.y - f.from.y) * u;
+      h = (toggles.elev ? f.h0 + (f.h1 - f.h0) * u : 0) + Math.sin(Math.PI * u) * f.arc;
+      v = f.d / f.dur;                     // carry speed is constant across the flight
+    } else {
+      const i = Math.min(f.skid.samples.length - 2, Math.floor((t - f.dur) / f.skid.dt));
+      const s0 = f.skid.samples[i], s1 = f.skid.samples[i + 1];
+      x = f.to.x + Math.cos(f.a) * s0;
+      y = f.to.y + Math.sin(f.a) * s0;
+      h = groundAt(x, y);
+      v = (s1 - s0) / f.skid.dt;
+    }
+    if (Math.hypot(x - BASKET.x, y - BASKET.y) > CATCH_R) continue;
+    if (h < bh || h > bh + CATCH_H) continue;        // sailed over the cage, or passed below it
+    return { t, pos: { x, y }, v, caught: v <= CATCH_SPEED };
+  }
+  return null;
+}
+
+function hitBasket(e) {
+  if (e.caught) {
+    S.lie = { ...e.pos }; S.flight = null;
+    say('Chains at ' + m(e.v).toFixed(0) + ' m/s - it stays in.');
+    holeOut();
+    return;
+  }
+  // Too hot: kick out sideways, harder the faster it arrived.
+  const a = S.flight.a + rad((Math.random() * 2 - 1) * 70);
+  const d = Math.min(1.6, 0.3 + (e.v - CATCH_SPEED) * 0.12);
+  say('Hit the basket at ' + m(e.v).toFixed(0) + ' m/s - too hot, bounced out.');
+  startFlight(e.pos, a, d, true);
+}
+
+function holeOut() {
+  const sc = S.throws + S.penalties;
+  say('IN. ' + sc + ' strokes (par ' + PAR + ', ' + (sc - PAR >= 0 ? '+' : '') + (sc - PAR) + '). R to reset.');
+  S.phase = 'done'; S.flight = null;
+}
+
+function release(blown) {
+  const p = Math.min(1, S.power), d0 = throwDist(p);   // no distance bonus for busting
+  const sev = blown ? Math.random() : 0;               // 0 = got away with it, 1 = disaster
+  const ea = clamp(rad(gauss() * sigA(p) * (blown ? lerp(OVER_A, sev) : 1)), -MAX_ERR_A, MAX_ERR_A);
+  const ed = gauss() * sigD(p, d0) * (blown ? lerp(OVER_D, sev) : 1);
+  // A blown release does not just spray, it also dumps the throw short.
+  const shrink = blown ? lerp(OVER_SHORT, sev) : 1;
+  const a = S.lockedAngle + ea, d = Math.max(0.4, (d0 + ed) * shrink);
+  startFlight(S.lie, a, d, false);
+  S.throws++;
+  S.lastErr = deg(ea).toFixed(1) + '\u00b0'
+            + ' / ' + (ed >= 0 ? '+' : '') + m(ed).toFixed(1) + 'm / skid ' + m(S.flight.skid.dist).toFixed(1) + 'm'
+            + (blown ? ' / BLOWN x' + lerp(OVER_A, sev).toFixed(1) : '');
+  if (blown) say('Overcharged - held past 100%. Scatter x' + lerp(OVER_A, sev).toFixed(1)
+               + ', carry -' + ((1 - shrink) * 100).toFixed(0) + '%.');
+}
+
+// Real disc golf: OB costs a stroke and you play from where the disc LAST crossed
+// the OB line, not from the previous lie. If the flight crosses OB, comes back in
+// and goes out again, it is that last crossing that counts - so scan the whole path
+// and keep the final in-bounds point rather than stopping at the first one.
+const isOB = (x, y) => !inGrid(x | 0, y | 0) || isWater(x | 0, y | 0);
+
+function lastCrossing(from, to) {
+  const N = 240;                       // ~0.05 tiles per step over a max-length throw
+  let last = { ...from };
+  for (let i = 1; i <= N; i++) {
+    const t = i / N;
+    const x = from.x + (to.x - from.x) * t, y = from.y + (to.y - from.y) * t;
+    if (!isOB(x, y)) last = { x, y };
+  }
+  return last;
+}
+
+function land() {
+  const to = S.flight.rest, tx = to.x | 0, ty = to.y | 0;   // where it STOPS, after the skid
+  S.prevLie = { ...S.flight.from };
+  if (!inGrid(tx, ty) || isWater(tx, ty)) {
+    S.penalties++;
+    S.lie = lastCrossing(S.flight.from, to);
+    say((inGrid(tx, ty) ? 'Water' : 'OB') + '. +1, play from the last in-bounds point ('
+        + m(dist(S.lie, BASKET)).toFixed(0) + ' m from the basket).');
+  } else {
+    S.lie = { ...to };
+    const dd = dist(to, BASKET);
+    say('Landed ' + m(dd).toFixed(1) + ' m from the basket.'
+        + (dd <= GIMME_R ? ' Close enough to tap in.' : ''));
+  }
+  S.flight = null; S.phase = 'idle'; S.angle = aimBase();
+}
+
+// ---------------------------------------------------------------- drawing
+const cv = document.getElementById('c'), cx = cv.getContext('2d');
+
+function tilePath(tx, ty, h) {
+  const a = proj(tx, ty, h), b = proj(tx + 1, ty, h), c = proj(tx + 1, ty + 1, h), d = proj(tx, ty + 1, h);
+  cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.lineTo(c.x, c.y); cx.lineTo(d.x, d.y); cx.closePath();
+}
+
+function drawTile(tx, ty) {
+  const h = toggles.elev ? heightAt(tx, ty) : 0;
+  const water = isWater(tx, ty);
+  if (h > 0) { // side faces, so the plateau reads as raised
+    const a = proj(tx, ty + 1, h), b = proj(tx + 1, ty + 1, h);
+    const a0 = proj(tx, ty + 1, 0), b0 = proj(tx + 1, ty + 1, 0), c0 = proj(tx + 1, ty, 0), c = proj(tx + 1, ty, h);
+    cx.fillStyle = isTee(tx, ty) ? '#4a1917' : '#26361f';
+    cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.lineTo(b0.x, b0.y); cx.lineTo(a0.x, a0.y); cx.closePath(); cx.fill();
+    cx.fillStyle = isTee(tx, ty) ? '#3a1210' : '#1e2c19';
+    cx.beginPath(); cx.moveTo(b.x, b.y); cx.lineTo(c.x, c.y); cx.lineTo(c0.x, c0.y); cx.lineTo(b0.x, b0.y); cx.closePath(); cx.fill();
+  }
+  tilePath(tx, ty, h);
+  cx.fillStyle = isTee(tx, ty) ? '#6b2523'
+               : water ? ((tx + ty) % 2 ? '#1d4a6b' : '#1a4362')
+                       : (h > 0 ? ((tx + ty) % 2 ? '#41613a' : '#3b5934')
+                                : ((tx + ty) % 2 ? '#37502f' : '#32492b'));
+  cx.fill();
+  cx.strokeStyle = 'rgba(0,0,0,.18)'; cx.stroke();
+}
+
+function drawRings() {
+  if (!toggles.rings) return;
+  cx.save();
+  for (const r of [2, 4, 6, 8]) {
+    cx.beginPath();
+    for (let i = 0; i <= 48; i++) {
+      const a = i / 48 * Math.PI * 2;
+      const p = proj(S.lie.x + Math.cos(a) * r, S.lie.y + Math.sin(a) * r, 0);
+      i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y);
+    }
+    cx.strokeStyle = 'rgba(255,255,255,.13)'; cx.stroke();
+    const lp = proj(S.lie.x, S.lie.y + r, 0);
+    cx.fillStyle = 'rgba(255,255,255,.3)'; cx.font = '10px monospace';
+    cx.fillText(m(r) + 'm', lp.x - 8, lp.y + 3);
+  }
+  cx.restore();
+}
+
+// The cone is the whole point of Q1: risk has to be visible BEFORE you commit.
+function drawCone(p) {
+  const d0 = throwDist(p), sa = rad(sigA(p)) * 2, sd = sigD(p, d0) * 2;
+  // The cone must show where the disc COMES TO REST, skid included - otherwise the aid is
+  // short by the slide length and the throw reads as the game cheating you. The skid is
+  // surface-dependent, so it is resolved per angle: the far edge visibly pinches in over
+  // water, which is exactly the information the player needs before committing.
+  const carryNear = Math.max(0.4, d0 - sd), carryFar = d0 + sd, N = 22;
+  const edge = (i, carry) => {
+    const a = S.lockedAngle - sa + (2 * sa) * i / N;
+    const r = restDist(S.lie, a, carry);
+    return proj(S.lie.x + Math.cos(a) * r, S.lie.y + Math.sin(a) * r, 0);
+  };
+  cx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const q = edge(i, carryFar);
+    i ? cx.lineTo(q.x, q.y) : cx.moveTo(q.x, q.y);
+  }
+  for (let i = N; i >= 0; i--) {
+    const q = edge(i, carryNear);
+    cx.lineTo(q.x, q.y);
+  }
+  cx.closePath();
+  cx.fillStyle = 'rgba(255,196,84,.20)'; cx.fill();
+  cx.strokeStyle = 'rgba(255,196,84,.55)'; cx.stroke();
+  const md = restDist(S.lie, S.lockedAngle, d0);
+  const m = proj(S.lie.x + Math.cos(S.lockedAngle) * md, S.lie.y + Math.sin(S.lockedAngle) * md, 0);
+  cx.fillStyle = '#ffc454';
+  cx.beginPath(); cx.arc(m.x, m.y, 3, 0, 7); cx.fill();
+}
+
+// Ground height under a point, matching what drawMarker uses for the disc.
+// Without this the aim line sits at h=0 while the disc sits on the plateau,
+// so the line reads as floating below the disc.
+const groundAt = (x, y) => (toggles.elev && inGrid(x | 0, y | 0)) ? heightAt(x | 0, y | 0) : 0;
+
+function drawAimLine() {
+  const a = S.phase === 'power' ? S.lockedAngle : S.angle;
+  const N = 48;
+  cx.setLineDash([5, 5]);
+  cx.strokeStyle = 'rgba(255,255,255,.5)';
+  cx.beginPath();
+  for (let i = 0; i <= N; i++) {            // follow the terrain, so it stays glued to the ground
+    const d = MAX_D * i / N;
+    const x = S.lie.x + Math.cos(a) * d, y = S.lie.y + Math.sin(a) * d;
+    const p = proj(x, y, groundAt(x, y));
+    i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y);
+  }
+  cx.stroke();
+  cx.setLineDash([]);
+}
+
+function drawMarker(pos, color, r) {
+  const h = toggles.elev ? heightAt(pos.x | 0, pos.y | 0) : 0;
+  const p = proj(pos.x, pos.y, h);
+  cx.fillStyle = color;
+  cx.beginPath(); cx.ellipse(p.x, p.y, r, r * 0.5, 0, 0, 7); cx.fill();
+}
+
+function drawBasket() {
+  const h = toggles.elev ? heightAt(BASKET.x | 0, BASKET.y | 0) : 0;
+  const p = proj(BASKET.x, BASKET.y, h);
+  cx.fillStyle = 'rgba(0,0,0,.3)';
+  cx.beginPath(); cx.ellipse(p.x, p.y, 11, 5.5, 0, 0, 7); cx.fill();
+  cx.beginPath();                                  // the catch radius: what you are aiming at
+  for (let i = 0; i <= 32; i++) {
+    const t = i / 32 * Math.PI * 2;
+    const q = proj(BASKET.x + Math.cos(t) * CATCH_R, BASKET.y + Math.sin(t) * CATCH_R, h);
+    i ? cx.lineTo(q.x, q.y) : cx.moveTo(q.x, q.y);
+  }
+  cx.strokeStyle = 'rgba(232,237,244,.35)'; cx.stroke();
+  cx.strokeStyle = '#cfd6e0'; cx.lineWidth = 2;
+  cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(p.x, p.y - 34); cx.stroke();
+  cx.fillStyle = '#9aa6b5';
+  cx.beginPath(); cx.ellipse(p.x, p.y - 22, 10, 5, 0, 0, 7); cx.fill();
+  if (S.phase === 'done') {                        // the disc, sitting down in the cage
+    cx.fillStyle = '#ffd98a';
+    cx.beginPath(); cx.ellipse(p.x, p.y - 25, 7, 3.5, 0, 0, 7); cx.fill();
+    cx.strokeStyle = '#8a6b2a'; cx.stroke();
+  }
+  cx.fillStyle = '#e8edf4';
+  cx.beginPath(); cx.ellipse(p.x, p.y - 34, 8, 4, 0, 0, 7); cx.fill();
+  cx.lineWidth = 1;
+}
+
+function drawDisc() {
+  const f = S.flight, t = Math.min(1, f.t / f.dur);
+  let x, y, ground, air = 0;
+  if (f.t <= f.dur) {
+    x = f.from.x + (f.to.x - f.from.x) * t;
+    y = f.from.y + (f.to.y - f.from.y) * t;
+    ground = toggles.elev ? (f.h0 + (f.h1 - f.h0) * t) : 0;
+    air = Math.sin(Math.PI * t) * f.arc;
+  } else {                                  // skidding: on the ground, decelerating
+    const ts = Math.min(f.skidDur, f.t - f.dur);
+    const d = f.skid.samples[Math.min(f.skid.samples.length - 1, Math.floor(ts / f.skid.dt))];
+    x = f.to.x + Math.cos(f.a) * d;
+    y = f.to.y + Math.sin(f.a) * d;
+    ground = groundAt(x, y);
+  }
+  const h = ground + air;
+  if (toggles.shadow) { // shadow is the main depth cue under test
+    const s = proj(x, y, ground);
+    const k = 1 - (air / Math.max(f.arc, 0.001)) * 0.45;
+    cx.fillStyle = 'rgba(0,0,0,.35)';
+    cx.beginPath(); cx.ellipse(s.x, s.y, 7 * k, 3.5 * k, 0, 0, 7); cx.fill();
+  }
+  const p = proj(x, y, h);
+  cx.fillStyle = '#ffd98a';
+  cx.beginPath(); cx.ellipse(p.x, p.y, 7, 3.5, 0, 0, 7); cx.fill();
+  cx.strokeStyle = '#8a6b2a'; cx.stroke();
+}
+
+function drawBars() {
+  const bx = 24, by = cv.height - 54, bw = 380, bh = 16;
+  cx.fillStyle = 'rgba(255,255,255,.08)'; cx.fillRect(bx, by, bw, bh);
+
+  // Manual mode: mark the danger zone before the charge starts, so the cliff is never a
+  // surprise. The bar runs to POWER_MAX, so 100% sits just short of the right-hand end.
+  const danger = MODE === 'manual' && (S.phase === 'idle' || S.phase === 'power');
+  const px = v => bx + bw * v / POWER_MAX;
+  if (danger) {
+    cx.fillStyle = 'rgba(200,60,50,.30)'; cx.fillRect(px(0.95), by, px(1) - px(0.95), bh);
+    cx.fillStyle = 'rgba(235,70,55,.55)'; cx.fillRect(px(1), by, px(POWER_MAX) - px(1), bh);
+    cx.fillStyle = 'rgba(255,255,255,.55)'; cx.fillRect(px(1) - 1, by - 3, 2, bh + 6);
+  }
+
+  if (S.phase === 'dir' || S.phase === 'power') {
+    if (S.phase === 'dir') {
+      const v = (S.angle - (aimBase() - rad(75))) / rad(150);
+      cx.fillStyle = '#7fb3d5';
+      cx.fillRect(bx, by, bw * v, bh);
+      cx.fillStyle = '#fff'; cx.fillRect(bx + bw * v - 1, by - 4, 2, bh + 8);
+    } else if (!danger) {                         // timing sweep: plain 0..100% bar
+      cx.fillStyle = '#e8a33d';
+      cx.fillRect(bx, by, bw * S.power, bh);
+      cx.fillStyle = '#fff'; cx.fillRect(bx + bw * S.power - 1, by - 4, 2, bh + 8);
+    } else {                                      // manual charge: goes red inside the zone
+      const safe = Math.min(S.power, 0.95);
+      cx.fillStyle = '#e8a33d'; cx.fillRect(bx, by, px(safe) - bx, bh);
+      if (S.power > 0.95) {
+        cx.fillStyle = S.power >= 1 ? '#ff4a3d' : '#d9452f';
+        cx.fillRect(px(0.95), by, px(S.power) - px(0.95), bh);
+      }
+      cx.fillStyle = '#fff'; cx.fillRect(px(S.power) - 1, by - 4, 2, bh + 8);
+    }
+  }
+  cx.fillStyle = '#9aa6b5'; cx.font = '12px monospace';
+  cx.fillText(
+    S.phase === 'done' ? 'holed out - R to reset'
+    : MODE === 'manual'
+      ? (S.phase === 'power' ? 'POWER - release before 100% or the throw is blown (esc to cancel)'
+                             : S.phase === 'flying' ? '' : 'arrows to aim, hold space for power')
+    : S.phase === 'dir' ? 'DIRECTION - space to lock'
+    : S.phase === 'power' ? 'POWER - space to throw (more power = bigger cone)'
+    : S.phase === 'flying' ? '' : 'space to start aiming',
+    bx, by - 10);
+}
+
+function render() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  for (let s = 0; s < GW + GH; s++)
+    for (let tx = 0; tx < GW; tx++) {
+      const ty = s - tx;
+      if (ty >= 0 && ty < GH) drawTile(tx, ty);
+    }
+  drawRings();
+  drawMarker(TEE, 'rgba(220,220,220,.55)', 9);
+  if (S.phase === 'dir' || S.phase === 'power' || (MODE === 'manual' && S.phase === 'idle')) drawAimLine();
+  if (S.phase === 'power' && toggles.cone) drawCone(S.power);
+  drawBasket();
+  if (S.phase !== 'done') drawMarker(S.lie, '#ff8a5c', 5);
+  if (S.flight) drawDisc();
+  drawBars();
+}
+
+// ---------------------------------------------------------------- loop
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  S.t += dt;
+  if (MODE === 'manual' && S.phase === 'idle') {
+    const turn = (held.right ? 1 : 0) - (held.left ? 1 : 0);
+    if (turn) S.angle += turn * TURN_RATE * (keyShift ? FINE_TURN : 1) * dt;
+  } else if (MODE === 'manual' && S.phase === 'power') {
+    S.power += dt / CHARGE_TIME;
+    if (S.power >= POWER_MAX) { S.power = POWER_MAX; release(true); }   // held too long
+  } else if (S.phase === 'dir') {
+    const tri = Math.abs(((S.t / 1.6) % 2) - 1);      // 0..1..0
+    S.angle = aimBase() - rad(75) + rad(150) * tri;
+  } else if (S.phase === 'power') {
+    S.power = Math.abs(((S.t / 1.2) % 2) - 1);
+  } else if (S.phase === 'flying') {
+    S.flight.t += dt;
+    const ev = S.flight.event;
+    if (ev && S.flight.t >= ev.t) hitBasket(ev);
+    else if (S.flight.t >= S.flight.dur + S.flight.skidDur) land();
+  }
+  render(); hud();
+  requestAnimationFrame(frame);
+}
+
+const $ = id => document.getElementById(id);
+function hud() {
+  const p = S.phase === 'power' ? S.power : null;
+  $('s-hole').textContent = holeLength().toFixed(0) + ' m - ' + classOf(holeLength());
+  $('s-phase').textContent = S.phase;
+  $('s-throws').textContent = S.throws;
+  $('s-pen').textContent = S.penalties;
+  $('s-dist').textContent = m(dist(S.lie, BASKET)).toFixed(1) + ' m';
+  $('s-power').textContent = p === null ? '-' : (p * 100).toFixed(0) + '%';
+  $('s-tdist').textContent = p === null ? '-' : m(throwDist(p)).toFixed(0) + ' m';
+  $('s-siga').textContent = p === null ? '-' : sigA(p).toFixed(1) + '°';
+  $('s-sigd').textContent = p === null ? '-' : m(sigD(p, throwDist(p))).toFixed(1) + ' m';
+  $('s-tile').textContent = TILE_M + ' m / ' + TILE_DIAG_M.toFixed(1) + ' m diag';
+  $('s-err').textContent = S.lastErr;
+  $('log').textContent = S.log.join('\n');
+  $('tapin').style.display = canTapIn() ? 'block' : 'none';
+  $('t1').textContent = toggles.cone ? 'on' : 'OFF';
+  $('t2').textContent = toggles.shadow ? 'on' : 'OFF';
+  $('t3').textContent = toggles.rings ? 'on' : 'OFF';
+  $('t4').textContent = toggles.elev ? 'on' : 'OFF';
+}
+
+const canTapIn = () => S.phase === 'idle' && dist(S.lie, BASKET) <= GIMME_R;
+$('tapin').addEventListener('click', () => {
+  if (!canTapIn()) return;
+  const from = dist(S.lie, BASKET);
+  S.throws++;                       // a tap-in is still a stroke
+  S.lie = { ...BASKET };
+  $('tapin').blur();
+  say('Tapped in from ' + m(from).toFixed(1) + ' m.');
+  holeOut();
+});
+
+reset();
+setMode('manual');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
