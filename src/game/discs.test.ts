@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GIMME_R } from './constants';
-import { DISCS, DISC_TYPES, REF_D, effort } from './discs';
+import { DISCS, DISC_TYPES, FLIER_GAIN, REF_D, effort, flierGain } from './discs';
 import { m } from './scale';
 
 const inOrder = DISC_TYPES.map((t) => DISCS[t]);
@@ -55,6 +55,31 @@ describe('the disc table', () => {
     expect(m(DISCS.putter.max)).toBeCloseTo(25, 6);
     expect(m(DISCS.midrange.max)).toBeCloseTo(55, 6);
     expect(m(DISCS.driver.max)).toBeCloseTo(75, 6);
+  });
+});
+
+describe('flierGain', () => {
+  it('spans the 5-15% bonus across the roll', () => {
+    expect(flierGain(0)).toBeCloseTo(1.05, 10);
+    expect(flierGain(1)).toBeCloseTo(1.15, 10);
+    expect(flierGain(0.5)).toBeCloseTo(1.1, 10);
+  });
+
+  it('never takes distance away', () => {
+    for (const roll of [0, 0.25, 0.5, 0.75, 0.999]) {
+      expect(flierGain(roll)).toBeGreaterThan(1);
+      expect(flierGain(roll)).toBeLessThanOrEqual(FLIER_GAIN[1]);
+    }
+  });
+
+  it('rises with the roll', () => {
+    const gains = [0, 0.3, 0.6, 0.9].map(flierGain);
+    expect(gains).toEqual([...gains].sort((a, b) => a - b));
+  });
+
+  it('clamps a roll outside the unit range', () => {
+    expect(flierGain(-1)).toBe(FLIER_GAIN[0]);
+    expect(flierGain(9)).toBe(FLIER_GAIN[1]);
   });
 });
 

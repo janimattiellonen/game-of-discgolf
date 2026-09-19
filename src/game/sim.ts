@@ -12,7 +12,7 @@ import {
 } from './constants';
 import { BASKET, PAR, TEE, heightAt, holeLength, inGrid, isWater } from './course';
 import type { DiscType } from './discs';
-import { DISCS } from './discs';
+import { DISCS, FLIER_P, flierGain } from './discs';
 import { clamp, deg, dist, gauss, lerp, rad } from './math';
 import {
   basketEvent,
@@ -123,15 +123,29 @@ export function release(s: GameState, blown: boolean): void {
   const ed = gauss() * sigD(disc, d0) * (blown ? lerp(OVER_D, sev) : 1);
   // A blown release does not just spray, it also dumps the throw short.
   const shrink = blown ? lerp(OVER_SHORT, sev) : 1;
+  /**
+   * Clean releases only - a blown throw already rolls its own severity and loses 15-20% of
+   * its carry, and letting it also roll a bonus would make overcharging ambiguous. The gain
+   * multiplies LAST, after scatter: scaling d0 first would widen sigD with it, and then a
+   * flier would be indistinguishable from a long distance draw even in the log.
+   */
+  const flier = !blown && Math.random() < FLIER_P ? flierGain(Math.random()) : 1;
   const a = s.lockedAngle + ea;
-  const d = Math.max(0.4, (d0 + ed) * shrink);
+  const d = Math.max(0.4, (d0 + ed) * shrink * flier);
 
   startFlight(s, s.lie, a, d, false);
   s.throws++;
   s.lastErr =
     `${deg(ea).toFixed(1)}° / ${ed >= 0 ? '+' : ''}${m(ed).toFixed(1)}m` +
     ` / skid ${m(s.flight!.skid.dist).toFixed(1)}m` +
-    (blown ? ` / BLOWN x${lerp(OVER_A, sev).toFixed(1)}` : '');
+    (blown ? ` / BLOWN x${lerp(OVER_A, sev).toFixed(1)}` : '') +
+    (flier > 1 ? ` / FLIER +${((flier - 1) * 100).toFixed(0)}%` : '');
+  if (flier > 1) {
+    say(
+      s,
+      `That one got away - it flew ${((flier - 1) * 100).toFixed(0)}% further than it should.`,
+    );
+  }
   if (blown) {
     say(
       s,
