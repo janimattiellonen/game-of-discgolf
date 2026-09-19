@@ -1,0 +1,11 @@
+/*
+ * The canvas is a fixed 980x620 - the projection origin is in pixels, so scaling it would
+ * misplace the iso grid. Below ~1320px the panel wraps underneath instead of being clipped.
+ */
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  align-items: flex-start;
+}

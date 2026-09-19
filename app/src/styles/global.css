@@ -1,0 +1,39 @@
+:root {
+  --bg: #15181d;
+  --panel: #1b1f26;
+  --text: #d8dee9;
+  --muted: #767d89;
+  --line: #2a2f38;
+  --accent: #b4503c;
+  --accent-cool: #8fbcbb;
+  --key: #2a2f38;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+
+canvas {
+  background: #0e1116;
+  border-radius: 6px;
+  display: block;
+}
+
+kbd {
+  display: inline-block;
+  background: var(--key);
+  border-radius: 3px;
+  padding: 0 5px;
+  font: inherit;
+}
