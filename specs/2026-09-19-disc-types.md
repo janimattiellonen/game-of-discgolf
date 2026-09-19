@@ -466,7 +466,11 @@ outside the tested surface by the same rule.
       balance — pinning that with a test would freeze a hole the measurement spec is already
       planning to replace.
 - [ ] The driver at 55 m is compared against `prototypes/throw-feel.html` at full power. It
-      is the only throw in the new model that should feel like the old one.
+      is the only throw in the new model that should feel like the old one — 13.5 m of lateral
+      scatter against the prototype's 13.7 m, the one fixed point the reparameterisation left
+      standing. Every other disc and distance is new feel by construction, so "different"
+      there is expected rather than a finding, and CLAUDE.md's rule about saying "different"
+      out loud applies to this throw alone.
 
 ## How This Lands
 
