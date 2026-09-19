@@ -46,7 +46,8 @@ export const groundAt = (x: number, y: number, elev: boolean) =>
  * distance. When player skill arrives it will scale the disc table, not reappear here.
  *
  * What the hole is worth knowing for: the pin sits 83 m out, beyond every disc in the bag,
- * which is what makes the water a decision rather than a formality. Re-measured against the
- * three-disc model, a full-power driver at the pin drowns 52% of the time for a 1.8% tap-in
- * rate, so the greedy line is worse than it was, not better. course.test.ts guards it.
+ * which is what makes the water a decision rather than a formality. Simulated against the
+ * three-disc model, a full-power driver at the pin drowns about half the time for a tap-in
+ * rate under 2%, so the greedy line is worse than it was, not better. `pnpm sim` re-derives
+ * those figures; course.test.ts guards the premise behind them.
  */

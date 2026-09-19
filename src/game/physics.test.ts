@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { CATCH_SPEED, SKID_DECEL } from './constants';
+import { BASKET } from './course';
 import type { Disc } from './discs';
 import { DISCS, DISC_TYPES } from './discs';
 import {
+  basketEvent,
   flightArc,
   flightDur,
   impactSpeed,
@@ -13,6 +15,7 @@ import {
   throwDist,
 } from './physics';
 import { m, tl } from './scale';
+import type { BasketEvent } from './types';
 
 /**
  * Arbitrary tile distances for the tests that just need "a long throw" or "a short one".
@@ -27,16 +30,8 @@ const { putter, midrange, driver } = DISCS;
 const overPower = (n = 21) => Array.from({ length: n }, (_, i) => i / (n - 1));
 
 describe('throwDist', () => {
-  it('spans each disc from its softest throw to its longest', () => {
-    expect(m(throwDist(putter, 0))).toBeCloseTo(4, 6);
-    expect(m(throwDist(putter, 1))).toBeCloseTo(25, 6);
-    expect(m(throwDist(midrange, 0))).toBeCloseTo(12, 6);
-    expect(m(throwDist(midrange, 1))).toBeCloseTo(55, 6);
-    expect(m(throwDist(driver, 0))).toBeCloseTo(20, 6);
-    expect(m(throwDist(driver, 1))).toBeCloseTo(75, 6);
-  });
-
-  it('increases with power on every disc', () => {
+  /** The authored metres are pinned once, in discs.test.ts. Here it is the mapping. */
+  it('increases with power, from each disc floor to its ceiling', () => {
     for (const t of DISC_TYPES) {
       const ds = overPower().map((p) => throwDist(DISCS[t], p));
       expect(ds).toEqual([...ds].sort((a, b) => a - b));
@@ -270,20 +265,57 @@ describe('the air hole-out ceiling', () => {
  * property nobody wrote down is one refactor away from being "fixed".
  */
 describe('grip also decides who sticks in the chains', () => {
-  const grass = { x: 2, y: 2 };
-
-  /** How far into the slide the disc is still travelling too fast to stay in the chains. */
-  const hotFor = (disc: Disc) => {
-    const sk = skidPath(grass, 0, LONG, disc);
-    for (let i = 1; i < sk.samples.length; i++) {
-      if ((sk.samples[i] - sk.samples[i - 1]) / sk.dt < CATCH_SPEED) return sk.samples[i];
-    }
-    return sk.dist;
+  /**
+   * basketEvent walks the SKID samples against CATCH_SPEED as well as the carry, so how fast
+   * a disc sheds speed on the ground decides whether it stays in the chains - a fourth
+   * trade-off falling out of grip, on top of the three the disc table advertises.
+   *
+   * Identical line, identical carry, basket 1.4 tiles past the landing. The disc enters the
+   * cylinder at gap - CATCH_R, so 0.85 tiles into the slide: past the putter's cooling point
+   * of 0.58 and still short of its 1.08-tile stop, while the driver is hot until 1.61. The
+   * gap is also wider than CATCH_R, so the carry itself never clips the cage and what is
+   * under test is purely the slide.
+   *
+   * It is the right outcome - it is the putting disc - but it is emergent, and an emergent
+   * property nobody wrote down is one refactor away from being "fixed".
+   */
+  const throughTheBasket = (disc: Disc): BasketEvent | null => {
+    const carry = 15;
+    const gap = 1.4;
+    const to = { x: BASKET.x - gap, y: BASKET.y };
+    const from = { x: to.x - carry, y: to.y };
+    const skid = skidPath(to, 0, carry, disc);
+    return basketEvent(
+      {
+        from,
+        to,
+        rest: { x: to.x + skid.dist, y: to.y },
+        a: 0,
+        d: carry,
+        t: 0,
+        skid,
+        skidDur: skid.dur,
+        dur: flightDur(carry),
+        arc: flightArc(carry),
+        h0: 0,
+        h1: 0,
+        event: null,
+      },
+      false,
+    );
   };
 
-  it('cools a putter inside the chains while a driver is still hot', () => {
-    expect(hotFor(putter)).toBeLessThan(hotFor(midrange));
-    expect(hotFor(midrange)).toBeLessThan(hotFor(driver));
-    expect(hotFor(driver)).toBeGreaterThan(2 * hotFor(putter));
+  it('catches a putter skidding through the chains', () => {
+    const e = throughTheBasket(putter);
+    expect(e).not.toBeNull();
+    expect(e!.v).toBeLessThan(CATCH_SPEED);
+    expect(e!.caught).toBe(true);
+  });
+
+  it('rattles a driver out on the identical line and carry', () => {
+    const e = throughTheBasket(driver);
+    expect(e).not.toBeNull();
+    expect(e!.v).toBeGreaterThan(CATCH_SPEED);
+    expect(e!.caught).toBe(false);
   });
 });

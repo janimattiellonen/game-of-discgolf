@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest",
     "test:run": "vitest run",
+    "sim": "SIM=1 vitest run src/game/montecarlo.test.ts",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test:run"
   },
   "dependencies": {
