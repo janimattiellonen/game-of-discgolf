@@ -24,7 +24,7 @@ import {
   throwDist,
 } from './physics';
 import { m } from './scale';
-import { acrossThePowerBar, expectAscending } from './testing';
+import { acrossThePowerBar, expectAscending } from '../test-utils';
 
 /** Well clear of the water band and the grid edges, so a whole slide stays on grass. */
 const GRASS = { x: 2, y: 2 };

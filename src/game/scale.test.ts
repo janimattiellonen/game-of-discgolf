@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CLASSES, classOf, m, tl } from './scale';
-import { expectAscending } from './testing';
+import { expectAscending } from '../test-utils';
 
 describe('tile <-> metre conversion', () => {
   it('round-trips a tile distance through metres unchanged', () => {

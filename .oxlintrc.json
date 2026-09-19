@@ -5,5 +5,24 @@
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
     "prefer-const": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/**"],
+      "excludeFiles": ["src/**/*.test.ts", "src/test-utils.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "vitest",
+                "message": "src/game/ ships to the browser via createGame(). Test code belongs in a *.test.ts file or in src/test-utils.ts."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
