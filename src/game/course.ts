@@ -1,4 +1,4 @@
-import { m, tl } from './scale';
+import { m } from './scale';
 import type { Vec } from './types';
 
 /**
@@ -41,20 +41,12 @@ export const groundAt = (x: number, y: number, elev: boolean) =>
   elev && inGrid(x | 0, y | 0) ? heightAt(x | 0, y | 0) : 0;
 
 /**
- * The player's arm, in metres - the knob that defines who you are on the course.
- * 55 m at full power is a beginner's drive; intermediate ~90 m, advanced ~110, pro 130+.
- */
-export const DRIVE_M = 55;
-export const PUTT_M = 7.5;
-
-/**
- * Tiles, at power 0 and power 1. Tuned by Monte Carlo: from the tee at full power the
- * carry clears ~55% of the time and drowns ~27%, leaving a makeable approach. At 85% power
- * it is a coin flip; below that the greedy line is simply bad. So the real choice is
- * "commit fully or go around" - which is the decision under test.
+ * There is no arm constant here any more. How far the player throws is a property of the
+ * DISC now (see discs.ts), not of the course, and nothing in this file should know a throw
+ * distance. When player skill arrives it will scale the disc table, not reappear here.
  *
- * NOTE: those figures predate the OB rule, the landing skid and water deceleration. They
- * need re-running.
+ * What the hole is worth knowing for: the pin sits 83 m out, beyond every disc in the bag,
+ * which is what makes the water a decision rather than a formality. Re-measured against the
+ * three-disc model, a full-power driver at the pin drowns 52% of the time for a 1.8% tap-in
+ * rate, so the greedy line is worse than it was, not better. course.test.ts guards it.
  */
-export const MIN_D = tl(PUTT_M);
-export const MAX_D = tl(DRIVE_M);

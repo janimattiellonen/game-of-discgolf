@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest';
+import { DISCS, DISC_TYPES, REF_D, effort } from './discs';
+import { m } from './scale';
+
+const inOrder = DISC_TYPES.map((t) => DISCS[t]);
+
+describe('the disc table', () => {
+  it('can throw every disc', () => {
+    for (const d of inOrder) expect(d.min).toBeLessThan(d.max);
+  });
+
+  it('reaches further with every disc down the list', () => {
+    const mins = inOrder.map((d) => d.min);
+    const maxes = inOrder.map((d) => d.max);
+    expect(mins).toEqual([...mins].sort((a, b) => a - b));
+    expect(maxes).toEqual([...maxes].sort((a, b) => a - b));
+  });
+
+  /**
+   * The three trade-offs have to point the same way: a disc that reaches further is harder
+   * to control and slides longer. A typo that flipped one column would leave a table that
+   * still looks plausible and a game where the driver is the safe disc, so the shape is
+   * asserted rather than the numbers.
+   */
+  it('pays for reach in control, spread and run-out together', () => {
+    const controls = inOrder.map((d) => d.control);
+    const spreads = inOrder.map((d) => d.spread);
+    const grips = inOrder.map((d) => d.grip);
+    expect(controls).toEqual([...controls].sort((a, b) => a - b));
+    expect(spreads).toEqual([...spreads].sort((a, b) => a - b));
+    expect(grips).toEqual([...grips].sort((a, b) => b - a));
+  });
+
+  /** Every multiplier is read against the midrange, so it has to be the literal 1.0 row. */
+  it('defines the midrange as the unit disc', () => {
+    expect(DISCS.midrange.control).toBe(1);
+    expect(DISCS.midrange.spread).toBe(1);
+    expect(DISCS.midrange.grip).toBe(1);
+  });
+
+  it('authors the table in metres', () => {
+    expect(m(DISCS.putter.max)).toBeCloseTo(25, 6);
+    expect(m(DISCS.midrange.max)).toBeCloseTo(55, 6);
+    expect(m(DISCS.driver.max)).toBeCloseTo(75, 6);
+  });
+});
+
+describe('effort', () => {
+  /**
+   * REF_D is written out as its own constant so that retuning the driver cannot silently
+   * rescale every other disc's scatter. The relationship still has to hold - if the longest
+   * throw in the bag falls short of the yardstick, effort never reaches 1 and the top of the
+   * scatter curve becomes unreachable - so it is asserted here instead, which makes moving
+   * the driver a decision somebody has to make out loud.
+   */
+  it('uses the longest throw in the bag as its yardstick', () => {
+    expect(REF_D).toBeCloseTo(DISCS.driver.max, 10);
+    expect(effort(DISCS.driver.max)).toBeCloseTo(1, 10);
+  });
+
+  it('rises from nothing at rest to 1 at full reach', () => {
+    expect(effort(0)).toBe(0);
+    expect(effort(REF_D / 2)).toBeCloseTo(0.5, 10);
+  });
+
+  it('clamps at both ends', () => {
+    expect(effort(-5)).toBe(0);
+    expect(effort(REF_D * 3)).toBe(1);
+  });
+});

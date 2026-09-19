@@ -1,5 +1,5 @@
 import type { Game, Snapshot, Toggles } from '../game';
-import { TILE_DIAG_M, TILE_M } from '../game';
+import { DISCS, DISC_TYPES, TILE_DIAG_M, TILE_M, m } from '../game';
 import styles from './Panel.module.css';
 
 const AIDS: { key: keyof Toggles; label: string; hint: string }[] = [
@@ -33,6 +33,12 @@ export function Panel({ snap, game }: { snap: Snapshot; game: Game | null }) {
 
       <div className={styles.box}>
         <Row label="Hole" value={`${snap.holeMetres.toFixed(0)} m - ${snap.holeClass}`} />
+        <Row
+          label="Disc"
+          value={`${snap.disc} - ${m(DISCS[snap.disc].min).toFixed(0)}-${m(
+            DISCS[snap.disc].max,
+          ).toFixed(0)} m`}
+        />
         <Row label="Phase" value={snap.phase} />
         <Row label="Throws" value={String(snap.throws)} />
         <Row label="Penalties" value={String(snap.penalties)} />
@@ -59,7 +65,24 @@ export function Panel({ snap, game }: { snap: Snapshot; game: Game | null }) {
       <div className={`${styles.box} ${styles.log}`}>{snap.log.join('\n')}</div>
 
       <div className={styles.box}>
-        <div className={styles.muted}>Aiming mode</div>
+        <div className={styles.muted}>Disc</div>
+        {DISC_TYPES.map((type, i) => (
+          <label key={type} className={`${styles.mode} ${snap.disc === type ? '' : styles.off}`}>
+            <input
+              type="radio"
+              name="disc"
+              value={type}
+              checked={snap.disc === type}
+              onChange={(e) => {
+                game?.setDisc(type);
+                e.currentTarget.blur();
+              }}
+            />
+            {type} <kbd>{'QWE'[i]}</kbd> {m(DISCS[type].max).toFixed(0)} m
+          </label>
+        ))}
+
+        <div className={`${styles.muted} ${styles.aidsHead}`}>Aiming mode</div>
         {(['manual', 'timing'] as const).map((mode) => (
           <label key={mode} className={`${styles.mode} ${snap.mode === mode ? '' : styles.off}`}>
             <input

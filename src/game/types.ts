@@ -1,3 +1,5 @@
+import type { DiscType } from './discs';
+
 export interface Vec {
   x: number;
   y: number;
@@ -58,6 +60,8 @@ export interface Toggles {
 export interface GameState {
   phase: Phase;
   mode: AimMode;
+  /** the disc in hand. Unlike mode and toggles, reset() puts this back to the driver. */
+  disc: DiscType;
   lie: Vec;
   prevLie: Vec;
   throws: number;

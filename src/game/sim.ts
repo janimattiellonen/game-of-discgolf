@@ -10,7 +10,9 @@ import {
   POWER_MAX,
   TURN_RATE,
 } from './constants';
-import { BASKET, PAR, TEE, heightAt, holeLength, inGrid, isWater, MAX_D, MIN_D } from './course';
+import { BASKET, PAR, TEE, heightAt, holeLength, inGrid, isWater } from './course';
+import type { DiscType } from './discs';
+import { DISCS } from './discs';
 import { clamp, deg, dist, gauss, lerp, rad } from './math';
 import {
   basketEvent,
@@ -29,6 +31,7 @@ export function createState(): GameState {
   const s: GameState = {
     phase: 'idle',
     mode: 'manual',
+    disc: 'driver',
     lie: { ...TEE },
     prevLie: { ...TEE },
     throws: 0,
@@ -53,7 +56,14 @@ export function createState(): GameState {
   return s;
 }
 
-/** Reset in place so anything holding the state object keeps working. */
+/**
+ * Reset in place so anything holding the state object keeps working.
+ *
+ * mode and toggles survive because they are PREFERENCES - how you want to play. The disc
+ * deliberately does not: it is a move, not a preference, and a reset puts you back on the
+ * tee of an 83 m hole. Starting that holding the putter you holed out with is a bug the
+ * player has to notice before it costs them a stroke.
+ */
 export function reset(s: GameState): void {
   const fresh = createState();
   fresh.mode = s.mode;
@@ -79,7 +89,7 @@ export const canTapIn = (s: GameState) => s.phase === 'idle' && dist(s.lie, BASK
  */
 function startFlight(s: GameState, from: Vec, a: number, d: number, bounced: boolean): void {
   const to = { x: from.x + Math.cos(a) * d, y: from.y + Math.sin(a) * d };
-  const sk = skidPath(to, a, d);
+  const sk = skidPath(to, a, d, DISCS[s.disc]);
   const f = {
     from: { ...from },
     to,
@@ -101,11 +111,16 @@ function startFlight(s: GameState, from: Vec, a: number, d: number, bounced: boo
 }
 
 export function release(s: GameState, blown: boolean): void {
+  const disc = DISCS[s.disc];
   const p = Math.min(1, s.power); // no distance bonus for busting
-  const d0 = throwDist(p);
+  const d0 = throwDist(disc, p);
   const sev = blown ? Math.random() : 0; // 0 = got away with it, 1 = disaster
-  const ea = clamp(rad(gauss() * sigA(p) * (blown ? lerp(OVER_A, sev) : 1)), -MAX_ERR_A, MAX_ERR_A);
-  const ed = gauss() * sigD(p, d0) * (blown ? lerp(OVER_D, sev) : 1);
+  const ea = clamp(
+    rad(gauss() * sigA(disc, d0) * (blown ? lerp(OVER_A, sev) : 1)),
+    -MAX_ERR_A,
+    MAX_ERR_A,
+  );
+  const ed = gauss() * sigD(disc, d0) * (blown ? lerp(OVER_D, sev) : 1);
   // A blown release does not just spray, it also dumps the throw short.
   const shrink = blown ? lerp(OVER_SHORT, sev) : 1;
   const a = s.lockedAngle + ea;
@@ -200,6 +215,17 @@ export function setMode(s: GameState, mode: AimMode): void {
   if (s.phase === 'idle') s.angle = aimBase(s);
 }
 
+/**
+ * Unlike setMode, this does NOT cancel a running charge. setMode has to, because changing
+ * the aiming mode invalidates the phase the player is standing in; pressing a disc key with
+ * the power bar climbing is a fumble, and silently dumping a charged throw is a worse answer
+ * to a fumble than doing nothing at all.
+ */
+export function setDisc(s: GameState, disc: DiscType): void {
+  if (s.phase !== 'idle' && s.phase !== 'done') return;
+  s.disc = disc;
+}
+
 export function pressSpace(s: GameState, repeat: boolean): void {
   if (s.mode === 'manual') {
     // Key repeat fires while it is held down; only the first press starts the charge.
@@ -265,5 +291,3 @@ export function step(s: GameState, dt: number): void {
     else if (f.t >= f.dur + f.skidDur) land(s);
   }
 }
-
-export { MAX_D, MIN_D };
