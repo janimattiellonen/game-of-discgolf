@@ -12,8 +12,9 @@ import { rad } from './math';
  * overcharge cliff.
  *
  * What the simulation then found is that the course puts the choice back: a driver at 80%
- * power drowns 29.5% of tee shots against 52.4% at full power, and taps in more often. The
- * bar still has a wrong end - the water decides it rather than this curve.
+ * power drowns about 30% of tee shots against about 52% at full power, and taps in more
+ * often. The bar still has a wrong end - the water decides it rather than this curve.
+ * Re-derive with `pnpm sim`.
  */
 export const SIG_A0 = 3;
 export const SIG_A1 = 14; // degrees of angular scatter, at power 0 and 1
@@ -45,6 +46,17 @@ export const POWER_MAX = 1.01;
 export const OVER_A = [1.4, 2.2] as const; // angle scatter multiplier
 export const OVER_D = [1.2, 2.0] as const; // distance scatter multiplier
 export const OVER_SHORT = [0.85, 0.8] as const; // carry left after a bust: 15-20% gone
+
+/**
+ * The flier. Maximum distance is soft, and soft UPWARDS only: roughly one clean throw in
+ * twelve gets away and carries 5-15% further than it should.
+ *
+ * sigD already lets a throw land long, but it is the constant hum of imprecision - the flier
+ * is the rare, nameable one the player tells a story about, which is why it is announced in
+ * the log rather than left to look like a bug.
+ */
+export const FLIER_P = 0.08;
+export const FLIER_GAIN = [1.05, 1.15] as const;
 
 // ---------------------------------------------------------------- landing skid
 /**

@@ -1,6 +1,7 @@
 import {
   CATCH_SPEED,
   CHARGE_TIME,
+  FLIER_P,
   FINE_TURN,
   GIMME_R,
   MAX_ERR_A,
@@ -12,7 +13,7 @@ import {
 } from './constants';
 import { BASKET, PAR, TEE, heightAt, holeLength, inGrid, isWater } from './course';
 import type { DiscType } from './discs';
-import { DISCS, FLIER_P, flierGain } from './discs';
+import { DISCS, flierGain } from './discs';
 import { clamp, deg, dist, gauss, lerp, rad } from './math';
 import {
   basketEvent,

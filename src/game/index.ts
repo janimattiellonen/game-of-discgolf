@@ -1,6 +1,6 @@
 import { BASKET, PAR, holeLength } from './course';
 import type { DiscType } from './discs';
-import { DISCS } from './discs';
+import { DISCS, DISC_KEYS, DISC_TYPES } from './discs';
 import { dist } from './math';
 import { sigA, sigD, throwDist } from './physics';
 import { render } from './render';
@@ -157,9 +157,9 @@ export function createGame(canvas: HTMLCanvasElement): Game {
         }
         // Above the manual-mode branch below, which ends in a return - anything after it
         // would be a dead key in the mode most people play.
-        if (e.code === 'KeyQ') setDisc(state, 'putter');
-        if (e.code === 'KeyW') setDisc(state, 'midrange');
-        if (e.code === 'KeyE') setDisc(state, 'driver');
+        for (const type of DISC_TYPES) {
+          if (e.code === `Key${DISC_KEYS[type]}`) setDisc(state, type);
+        }
         if (e.code === 'Digit1') state.toggles.cone = !state.toggles.cone;
         if (e.code === 'Digit2') state.toggles.shadow = !state.toggles.shadow;
         if (e.code === 'Digit3') state.toggles.rings = !state.toggles.rings;
@@ -236,5 +236,5 @@ export function createGame(canvas: HTMLCanvasElement): Game {
 export type { AimMode, GameState, Phase, Toggles } from './types';
 export type { Disc, DiscType } from './discs';
 /** The disc table is static, so the picker reads it directly instead of via the Snapshot. */
-export { DISCS, DISC_TYPES } from './discs';
+export { DISCS, DISC_KEYS, DISC_TYPES } from './discs';
 export { TILE_M, TILE_DIAG_M, m } from './scale';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { GIMME_R } from './constants';
-import { DISCS, DISC_TYPES, FLIER_GAIN, REF_D, effort, flierGain } from './discs';
+import { FLIER_GAIN, GIMME_R } from './constants';
+import { DISCS, DISC_KEYS, DISC_TYPES, REF_D, effort, flierGain } from './discs';
 import { m } from './scale';
 
 const inOrder = DISC_TYPES.map((t) => DISCS[t]);
@@ -55,6 +55,14 @@ describe('the disc table', () => {
     expect(m(DISCS.putter.max)).toBeCloseTo(25, 6);
     expect(m(DISCS.midrange.max)).toBeCloseTo(55, 6);
     expect(m(DISCS.driver.max)).toBeCloseTo(75, 6);
+  });
+});
+
+describe('DISC_KEYS', () => {
+  it('binds one distinct key per disc', () => {
+    const keys = DISC_TYPES.map((t) => DISC_KEYS[t]);
+    expect(new Set(keys).size).toBe(DISC_TYPES.length);
+    for (const k of keys) expect(k).toMatch(/^[A-Z]$/);
   });
 });
 

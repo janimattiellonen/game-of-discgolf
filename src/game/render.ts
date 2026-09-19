@@ -91,8 +91,8 @@ function drawRings(cx: Ctx, s: GameState) {
   if (!s.toggles.rings) return;
   const n = Math.floor(m(DISCS[s.disc].max) / 10);
   cx.save();
-  for (let i = 1; i <= n; i++) {
-    const r = tl(i * 10);
+  for (let ring = 1; ring <= n; ring++) {
+    const r = tl(ring * 10);
     cx.beginPath();
     for (let i = 0; i <= 48; i++) {
       const a = (i / 48) * Math.PI * 2;
@@ -105,7 +105,7 @@ function drawRings(cx: Ctx, s: GameState) {
     const lp = proj(s.lie.x, s.lie.y + r, 0);
     cx.fillStyle = 'rgba(255,255,255,.3)';
     cx.font = '10px monospace';
-    cx.fillText(`${i * 10}m`, lp.x - 8, lp.y + 3);
+    cx.fillText(`${ring * 10}m`, lp.x - 8, lp.y + 3);
   }
   cx.restore();
 }

@@ -1,3 +1,4 @@
+import { FLIER_GAIN } from './constants';
 import { clamp } from './math';
 import { tl } from './scale';
 
@@ -5,6 +6,17 @@ export type DiscType = 'putter' | 'midrange' | 'driver';
 
 /** Bag order - shortest to longest. The picker and the tests both read it. */
 export const DISC_TYPES = ['putter', 'midrange', 'driver'] as const;
+
+/**
+ * The key that selects each disc. Here rather than in bindKeys because the panel has to
+ * print the same letters it binds: split across the two files, adding a fourth disc means
+ * two correct edits with nothing tying them together.
+ */
+export const DISC_KEYS: Record<DiscType, string> = {
+  putter: 'Q',
+  midrange: 'W',
+  driver: 'E',
+};
 
 export interface Disc {
   type: DiscType;
@@ -83,18 +95,9 @@ export const REF_D = tl(REF_M);
 export const effort = (carry: number) => clamp(carry / REF_D, 0, 1);
 
 /**
- * The flier. Maximum distance is soft, and soft UPWARDS only: roughly one clean throw in
- * twelve gets away and carries 5-15% further than it should.
- *
- * sigD already lets a throw land long, but it is the constant hum of imprecision - the flier
- * is the rare, nameable one the player tells a story about, which is why it is announced in
- * the log rather than left to look like a bug.
- *
- * The roll is a PARAMETER, not a call to Math.random(): that keeps the curve testable
- * without mocking the global, which is how gauss() should have been written too.
+ * Where a flier roll lands inside the FLIER_GAIN band. The roll is a PARAMETER, not a call
+ * to Math.random(): that keeps the curve testable without mocking the global, which is how
+ * gauss() should have been written too.
  */
-export const FLIER_P = 0.08;
-export const FLIER_GAIN = [1.05, 1.15] as const;
-
 export const flierGain = (roll: number) =>
   FLIER_GAIN[0] + (FLIER_GAIN[1] - FLIER_GAIN[0]) * clamp(roll, 0, 1);
