@@ -1,0 +1,9 @@
+dist
+pnpm-lock.yaml
+
+# Prose and the original prototype: hand-wrapped, not Prettier's business
+docs
+prompts
+reports
+specs
+prototypes

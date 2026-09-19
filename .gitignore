@@ -15,11 +15,13 @@ Icon?
 .vscode/
 !.vscode/extensions.json
 
-# Node / tooling (nothing uses these yet, but the prototype will grow a build step)
+# Node / tooling
 node_modules/
 dist/
+dist-ssr/
 build/
 .cache/
+*.local
 *.log
 npm-debug.log*
 yarn-error.log*

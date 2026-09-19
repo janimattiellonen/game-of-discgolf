@@ -1,4 +1,4 @@
-# Game of Disc Golf — app
+# Game of Disc Golf
 
 Vite + React 19 + TypeScript. The game itself is framework-agnostic; React only provides
 the menus and panels around it.
@@ -50,5 +50,5 @@ design tokens in `src/styles/global.css`.
 
 ## Reference
 
-`../prototypes/throw-feel.html` is the original single-file prototype this was ported from.
+`prototypes/throw-feel.html` is the original single-file prototype this was ported from.
 It is kept until the ported version is confirmed to feel identical.
