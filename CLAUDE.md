@@ -27,8 +27,9 @@ from Prettier on purpose. Do not reformat them.
 ## Before you say it is done
 
 - `pnpm check` — typecheck, then oxlint, then `prettier --check`, then the Vitest
-  suite. One command, fail-fast, and it is the same one CI would run. `pnpm test`
-  is the watch mode for while you work.
+  suite. One command, fail-fast, and there is no CI in this repo to run it for
+  you — a red branch reaches `main` unless you catch it. `pnpm test` is the watch
+  mode for while you work.
 - `pnpm build` **if you touched `vite.config.ts`**. `pnpm check` typechecks only
   `tsconfig.app.json`, which covers `src/` and nothing else; the config file lives
   in `tsconfig.node.json` and is checked only by the `tsc -b` inside the build. A
