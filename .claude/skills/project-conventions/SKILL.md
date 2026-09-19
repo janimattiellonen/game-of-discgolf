@@ -11,8 +11,8 @@ user-invocable: false
 `src/game/` is plain TypeScript and **never imports React**. It draws to a
 `CanvasRenderingContext2D` it is handed, and `createGame(canvas)` in
 `src/game/index.ts` is its entire public API — `start`, `stop`, `subscribe`,
-`bindKeys`, `reset`, `tapIn`, `setMode`, `toggle`. Anything that can produce a
-canvas can run this game; React is one caller, not the host.
+`bindKeys`, `reset`, `tapIn`, `setMode`, `setDisc`, `toggle`. Anything that can
+produce a canvas can run this game; React is one caller, not the host.
 
 A React import inside `src/game/` is not a style slip, it is the boundary
 collapsing, and no lint rule here will catch it.
@@ -51,8 +51,9 @@ model.
 
 ## Tuning constants live in constants.ts, with the reason
 
-Scatter, overcharge, skid and basket numbers belong in `src/game/constants.ts`,
-not inline in `physics.ts` or `sim.ts`. They are grouped under banner comments
+Scatter, overcharge, flier, skid and basket numbers belong in
+`src/game/constants.ts`, not inline in `physics.ts` or `sim.ts`. They are grouped
+under banner comments
 (`// ---- scatter`, `// ---- input`) and the non-obvious ones carry a comment
 explaining the _design_ intent — why the bar runs 1% past full, why angular
 scatter is clamped so a shank still goes forward.
@@ -63,11 +64,11 @@ that is worth writing down before the value is.
 
 ## React layer
 
-`src/ui/` holds the panel, the mode picker and the tap-in button. Components take
-props and render; they reach the core only through the `Game` handle they are
-given (`game?.tapIn()`, `game?.setMode(...)`). No component imports from
-`src/game/` internals — only from `src/game` itself, which re-exports the public
-types.
+`src/ui/` holds the panel, the disc picker, the mode picker and the tap-in button.
+Components take props and render; they reach the core only through the `Game`
+handle they are given (`game?.tapIn()`, `game?.setMode(...)`,
+`game?.setDisc(...)`). No component imports from `src/game/` internals — only from
+`src/game` itself, which re-exports the public types.
 
 `src/App.tsx` is the wiring layer: it calls `useGame()`, sizes the canvas, and
 renders `<Panel>`. Keep it that thin.

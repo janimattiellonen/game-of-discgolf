@@ -335,7 +335,9 @@ diagnostic line and already carries `BLOWN x1.7` in exactly this shape:
 boolean would need a clearing rule nobody would remember.
 
 `throwMetres`, `sigAngle` and `sigDistance` keep their meaning and start reflecting the
-selected disc, because their inputs now do.
+selected disc, because their inputs now do. The panel also carries a `Disc` row in the stats
+box — name and reach — because the picker sits far below the numbers it changes, and the
+readouts above are otherwise unattributed.
 
 On the canvas, three things read the disc, and they are three different decisions:
 
@@ -372,16 +374,21 @@ New — `src/game/discs.test.ts`:
 
 New, in `src/game/physics.test.ts`:
 
-- **The inversion regression.** At every distance two discs can both throw — 25 m, 40 m —
-  `sigA` and `sigD` are strictly ordered putter < midrange < driver. This is the test that
+- **The inversion regression.** At every distance all three discs can throw — 15 m, 20 m,
+  25 m, which is the band the putter's 25 m ceiling leaves — `sigA` and `sigD` are strictly
+  ordered putter < midrange < driver. (An earlier draft named 40 m here; no putter can throw
+  it, so there is nothing to order.) This is the test that
   earns its place: it is the failure the naive design produces, and it is invisible in play
   until someone notices the driver is the accurate disc.
 - `throwDist(disc, 0)` is `disc.min` and `throwDist(disc, 1)` is `disc.max` for all three,
   and `m()` of those is the authored metre figure.
 - A putter's skid is shorter than a driver's from the same impact speed, and each still
   matches the closed form `v² / (2 · SKID_DECEL · grip)` on grass.
-- **The fourth trade-off:** a putter skidding through the basket is caught where a driver on
-  the identical line and carry rattles out.
+- **The fourth trade-off:** `basketEvent` itself is called — not a proxy for it — on two
+  flights with an identical line and carry, the basket set 1.4 tiles past the landing so the
+  disc enters the cylinder 0.85 tiles into the slide and the carry never clips the cage. The
+  putter is caught, the driver rattles out. Asserting the mechanism instead of the outcome
+  would leave the property the section is here to pin unpinned.
 - Water still stops every disc inside 0.2 tiles, driver included.
 
 Updating — and `MAX_D`/`MIN_D` have a wider blast radius here than the deletion suggests.
@@ -413,9 +420,13 @@ outside the tested surface by the same rule.
 
 ## Acceptance Criteria
 
-- [x] `src/game/discs.ts` holds `DiscType`, `Disc`, the `DISCS` table, `effort` and
-      `flierGain`, with the reasoning for each column in a banner comment. `constants.ts`
-      keeps the scalars; a record type and its derivations are not scalars.
+- [x] `src/game/discs.ts` holds `DiscType`, `Disc`, the `DISCS` table, `DISC_TYPES` (bag
+      order, which the picker and the tests both read), `DISC_KEYS` (the letters, so the panel
+      prints what `bindKeys` binds), `effort` and `flierGain`, with the reasoning for each
+      column in a banner comment. `constants.ts` keeps the scalars — including `FLIER_P` and
+      `FLIER_GAIN`, which are throw tuning consumed by `sim.ts` and belong with the scatter
+      and overcharge numbers. `REF_M` stays in `discs.ts`: its whole meaning is a relationship
+      to the table, and the test that pins it is about the bag.
 - [x] The table is authored in metres and derived to tiles at module load. No metre value
       crosses into `physics.ts` or `sim.ts`.
 - [x] `DRIVE_M` and `PUTT_M` are gone from `course.ts`, with no placeholder arm left behind.
@@ -436,11 +447,19 @@ outside the tested surface by the same rule.
 - [x] The landing cone and the aim line reflect the selected disc; ring spacing stays 10 m and
       only the ring count varies.
 - [x] `pnpm check` is green — 59 tests.
-- [x] **Monte Carlo before the feel is signed off.** Run before any of the implementation
-      existed, as a throwaway harness that was deleted rather than committed. Numbers are in
-      open question 1: the hole survives, the flier is exonerated, and full power turns out to
-      be the wrong driver shot. Deliberately not a Vitest assertion — pinning the game's
-      balance with a test would freeze a hole the next spec replaces.
+- [x] **Monte Carlo before the feel is signed off.** Run before any implementation existed,
+      against a harness that mirrored the model; then rebuilt on the shipped functions and
+      **committed** as `src/game/montecarlo.test.ts`, run with `pnpm sim` and skipped by
+      default. Numbers are in open question 1: the hole survives, the flier is exonerated, and
+      full power turns out to be the wrong driver shot.
+
+      It is committed rather than thrown away because the decision changed underneath the
+      earlier one. A throwaway is fine for a number that settles an argument and is then
+      forgotten; these figures ended up quoted as fact in `constants.ts`, `course.ts` and
+      `course.test.ts`, and a number asserted in three source files cannot rest on a harness
+      nobody can re-run. It is still not a regression gate and still asserts nothing about
+      balance — pinning that with a test would freeze a hole the measurement spec is already
+      planning to replace.
 - [ ] The driver at 55 m is compared against `prototypes/throw-feel.html` at full power. It
       is the only throw in the new model that should feel like the old one.
 
