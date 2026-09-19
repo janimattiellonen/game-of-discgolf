@@ -33,6 +33,23 @@ export const OVER_A = [1.4, 2.2] as const; // angle scatter multiplier
 export const OVER_D = [1.2, 2.0] as const; // distance scatter multiplier
 export const OVER_SHORT = [0.85, 0.8] as const; // carry left after a bust: 15-20% gone
 
+// ---------------------------------------------------------------- flight shape
+/**
+ * Hang time is affine in carry: a floor that every throw pays plus a per-tile cost. The
+ * floor is what stops a tap-in range flick from arriving instantly.
+ */
+export const DUR_BASE = 0.35; // seconds, the shortest flight there is
+export const DUR_PER_D = 0.075; // extra seconds per tile of carry
+
+/**
+ * Arc height rises with carry and then stops. The cap is not defensive - it engages at
+ * (ARC_MAX - ARC_BASE) / ARC_PER_D = 8.75 tiles, ~44 m, which is well inside the drive
+ * range, so every long throw shares one ceiling and only the length separates them.
+ */
+export const ARC_BASE = 0.4;
+export const ARC_PER_D = 0.32;
+export const ARC_MAX = 3.2;
+
 // ---------------------------------------------------------------- landing skid
 /**
  * A disc still has horizontal speed when it touches down, and kinetic friction bleeds that
@@ -52,6 +69,20 @@ export const WATER_DECEL = 150; // water: a full-power skid dies in ~0.15 tiles
 export const CATCH_R = 0.55; // tiles
 export const CATCH_H = 1.7; // units, matches the 34px the basket is drawn at
 export const CATCH_SPEED = 6; // tiles/s, faster than this and it bounces out
+
+/**
+ * Carry speed is constant across a flight at d / flightDur(d), so that curve crosses
+ * CATCH_SPEED at
+ *
+ *     CATCH_SPEED * DUR_BASE / (1 - CATCH_SPEED * DUR_PER_D) = 3.82 tiles, ~19.1 m
+ *
+ * and a disc can only ever hole out IN THE AIR from inside that. Every longer throw
+ * arrives too hot and has to go in off the skid instead.
+ *
+ * Nothing sets that ceiling deliberately - it falls out of CATCH_SPEED meeting the hang
+ * time curve - so retuning either one moves it with no other symptom. physics.test.ts
+ * pins it.
+ */
 
 /**
  * Inside the shortest possible throw (MIN_D) there is no shot to play: any throw
