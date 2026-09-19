@@ -318,4 +318,16 @@ describe('grip also decides who sticks in the chains', () => {
     expect(e!.v).toBeGreaterThan(CATCH_SPEED);
     expect(e!.caught).toBe(false);
   });
+
+  /**
+   * The whole bag, not just its ends: arrival speed at the chains is ordered the same way
+   * grip is. The midrange is on the wrong side of CATCH_SPEED here too - it cools at 0.89
+   * tiles and the cylinder starts at 0.85 - so what it pins is the ORDERING, which is the
+   * claim, rather than a catch/rattle verdict that would be an accident of this one gap.
+   */
+  it('orders arrival speed at the chains putter < midrange < driver', () => {
+    const speeds = [putter, midrange, driver].map((d) => throughTheBasket(d)!.v);
+    expect(speeds).toEqual([...speeds].sort((a, b) => a - b));
+    expect(new Set(speeds).size).toBe(3);
+  });
 });

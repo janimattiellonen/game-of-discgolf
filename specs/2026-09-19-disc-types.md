@@ -387,8 +387,9 @@ New, in `src/game/physics.test.ts`:
 - **The fourth trade-off:** `basketEvent` itself is called — not a proxy for it — on two
   flights with an identical line and carry, the basket set 1.4 tiles past the landing so the
   disc enters the cylinder 0.85 tiles into the slide and the carry never clips the cage. The
-  putter is caught, the driver rattles out. Asserting the mechanism instead of the outcome
-  would leave the property the section is here to pin unpinned.
+  putter is caught, the driver rattles out, and a third case pins the whole bag: arrival speed
+  at the chains is ordered putter < midrange < driver. Asserting the mechanism instead of the
+  outcome would leave the property the section is here to pin unpinned.
 - Water still stops every disc inside 0.2 tiles, driver included.
 
 Updating — and `MAX_D`/`MIN_D` have a wider blast radius here than the deletion suggests.
@@ -446,7 +447,7 @@ outside the tested surface by the same rule.
       `DiscType` and `m` for the picker.
 - [x] The landing cone and the aim line reflect the selected disc; ring spacing stays 10 m and
       only the ring count varies.
-- [x] `pnpm check` is green — 59 tests.
+- [x] `pnpm check` is green — 61 tests, plus the 2 the Monte Carlo keeps skipped.
 - [x] **Monte Carlo before the feel is signed off.** Run before any implementation existed,
       against a harness that mirrored the model; then rebuilt on the shipped functions and
       **committed** as `src/game/montecarlo.test.ts`, run with `pnpm sim` and skipped by
