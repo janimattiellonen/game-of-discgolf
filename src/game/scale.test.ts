@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CLASSES, classOf, m, tl } from './scale';
+import { expectAscending } from './testing';
 
 describe('tile <-> metre conversion', () => {
   it('round-trips a tile distance through metres unchanged', () => {
@@ -19,8 +20,7 @@ describe('classOf', () => {
    * class rather than failing, which is what this test is here to catch.
    */
   it('keeps the class bands in ascending order', () => {
-    const maxes = CLASSES.map((c) => c.max);
-    expect(maxes).toEqual([...maxes].sort((a, b) => a - b));
+    expectAscending(CLASSES.map((c) => c.max));
   });
 
   it('includes the upper bound in the band below it', () => {
