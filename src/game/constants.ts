@@ -1,7 +1,20 @@
 import { rad } from './math';
 
 // ---------------------------------------------------------------- scatter
-// Power sets distance AND scatter, so there is no "correct spot" on the bar.
+/**
+ * Power sets distance AND scatter, so there is no "correct spot" on the bar.
+ *
+ * That invariant is WEAKER now than it was, and deliberately so. Scatter is keyed to the
+ * distance of the throw rather than to the bar (see effort() in discs.ts), so a short disc
+ * spans a short stretch of this curve: a putter's whole bar runs 2.3 deg to 4.3 deg where a
+ * driver's runs 7.4 to 17.5. Risk lives primarily in WHICH DISC you pull now, and only
+ * secondarily in how hard you throw it; on a putter the last real gamble on the bar is the
+ * overcharge cliff.
+ *
+ * What the simulation then found is that the course puts the choice back: a driver at 80%
+ * power drowns 29.5% of tee shots against 52.4% at full power, and taps in more often. The
+ * bar still has a wrong end - the water decides it rather than this curve.
+ */
 export const SIG_A0 = 3;
 export const SIG_A1 = 14; // degrees of angular scatter, at power 0 and 1
 export const SIG_D0 = 0.03;

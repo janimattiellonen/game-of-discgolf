@@ -1,6 +1,7 @@
 # Disc Types: Putter, Midrange, Driver
 
-**Status:** measured, not yet implemented — see open question 1 for the Monte Carlo result
+**Status:** implemented on `feat/disc-types`; the feel comparison against the prototype is
+the one thing still outstanding
 **Date:** 2026-09-19
 **Prompt:** `prompts/disc types.md`
 
@@ -412,29 +413,29 @@ outside the tested surface by the same rule.
 
 ## Acceptance Criteria
 
-- [ ] `src/game/discs.ts` holds `DiscType`, `Disc`, the `DISCS` table, `effort` and
+- [x] `src/game/discs.ts` holds `DiscType`, `Disc`, the `DISCS` table, `effort` and
       `flierGain`, with the reasoning for each column in a banner comment. `constants.ts`
       keeps the scalars; a record type and its derivations are not scalars.
-- [ ] The table is authored in metres and derived to tiles at module load. No metre value
+- [x] The table is authored in metres and derived to tiles at module load. No metre value
       crosses into `physics.ts` or `sim.ts`.
-- [ ] `DRIVE_M` and `PUTT_M` are gone from `course.ts`, with no placeholder arm left behind.
-- [ ] `sigA` and `sigD` are keyed to effort against `REF_D`, not to the power bar, and are
+- [x] `DRIVE_M` and `PUTT_M` are gone from `course.ts`, with no placeholder arm left behind.
+- [x] `sigA` and `sigD` are keyed to effort against `REF_D`, not to the power bar, and are
       strictly ordered by disc at any shared distance.
-- [ ] `throwDist`, `sigA`, `sigD` and the skid all take the disc; `physics.ts` contains no
+- [x] `throwDist`, `sigA`, `sigD` and the skid all take the disc; `physics.ts` contains no
       `switch` on disc type.
-- [ ] `GIMME_R` is 0.8 tiles, equals `DISCS.putter.min`, and its comment explains the pairing.
-- [ ] The `constants.ts` scatter banner records that the within-disc risk gradient is now
+- [x] `GIMME_R` is 0.8 tiles, equals `DISCS.putter.min`, and its comment explains the pairing.
+- [x] The `constants.ts` scatter banner records that the within-disc risk gradient is now
       secondary to disc choice.
-- [ ] The flier fires on ~8% of clean releases for +5–15% carry, multiplies the finished carry
+- [x] The flier fires on ~8% of clean releases for +5–15% carry, multiplies the finished carry
       after scatter, never fires on a blown throw, and appears in `lastErr` and the log.
-- [ ] Q/W/E — bound above the manual-mode `return` in `bindKeys` — and a `name="disc"` radio
+- [x] Q/W/E — bound above the manual-mode `return` in `bindKeys` — and a `name="disc"` radio
       group select a disc; selection is ignored mid-throw, does not cancel a charge, persists
       between throws, and is restored to the driver by `reset()`.
-- [ ] `Snapshot` carries `disc` and nothing else new; `src/game/index.ts` re-exports `DISCS`,
+- [x] `Snapshot` carries `disc` and nothing else new; `src/game/index.ts` re-exports `DISCS`,
       `DiscType` and `m` for the picker.
-- [ ] The landing cone and the aim line reflect the selected disc; ring spacing stays 10 m and
+- [x] The landing cone and the aim line reflect the selected disc; ring spacing stays 10 m and
       only the ring count varies.
-- [ ] `pnpm check` is green.
+- [x] `pnpm check` is green — 59 tests.
 - [x] **Monte Carlo before the feel is signed off.** Run before any of the implementation
       existed, as a throwaway harness that was deleted rather than committed. Numbers are in
       open question 1: the hole survives, the flier is exonerated, and full power turns out to
