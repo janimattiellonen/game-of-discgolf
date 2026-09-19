@@ -28,7 +28,7 @@ const overPower = (n = 21) => Array.from({ length: n }, (_, i) => i / (n - 1));
 
 describe('throwDist', () => {
   it('spans each disc from its softest throw to its longest', () => {
-    expect(m(throwDist(putter, 0))).toBeCloseTo(7.5, 6);
+    expect(m(throwDist(putter, 0))).toBeCloseTo(4, 6);
     expect(m(throwDist(putter, 1))).toBeCloseTo(25, 6);
     expect(m(throwDist(midrange, 0))).toBeCloseTo(12, 6);
     expect(m(throwDist(midrange, 1))).toBeCloseTo(55, 6);

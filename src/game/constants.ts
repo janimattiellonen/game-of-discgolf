@@ -54,7 +54,16 @@ export const CATCH_H = 1.7; // units, matches the 34px the basket is drawn at
 export const CATCH_SPEED = 6; // tiles/s, faster than this and it bounces out
 
 /**
- * Inside the shortest possible throw (MIN_D) there is no shot to play: any throw
- * overshoots. That range is exactly where the tap-in button belongs.
+ * Inside the shortest possible throw there is no shot to play: any throw overshoots. That
+ * range is exactly where the tap-in button belongs.
+ *
+ * This is PAIRED WITH DISCS.putter.min and discs.test.ts asserts they stay equal. Move one
+ * without the other and you open a band with no legal shot in it - too far to tap in, closer
+ * than the softest disc in the bag can throw - where the player is forced to overshoot into
+ * the circle and tap in from there, paying a stroke they can neither avoid nor explain.
+ *
+ * It used to be 7.5 m, equal to the old MIN_D by coincidence of two unrelated constants. A
+ * bag breaks that coincidence, so both ends moved down together: at 4 m the 5-7 m putt is a
+ * shot the player stands over, which is what makes the putter a disc rather than a label.
  */
-export const GIMME_R = 1.5;
+export const GIMME_R = 0.8;

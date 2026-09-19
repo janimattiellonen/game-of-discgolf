@@ -42,6 +42,10 @@ const disc = (
  * feel: nothing here flies like the disc this replaces, because the scatter curve is keyed
  * to distance now rather than to the power bar (see sigA in physics.ts).
  *
+ * The putter's floor is not a free choice: it is GIMME_R, the tap-in radius, and
+ * discs.test.ts asserts they stay equal. Anything above it would be a range where no disc
+ * can throw and the tap-in is not offered either.
+ *
  * Reach is paid for three times over. A driver goes 75 m, but it scatters 1.25x as wide,
  * misses its distance by 1.3x as much, and decelerates at 0.55x the rate once it touches
  * down - so it is also the disc that will not stop near the basket. A putter is the mirror
@@ -49,7 +53,7 @@ const disc = (
  * a putt, which is what makes the choice real inside 20 m.
  */
 export const DISCS: Record<DiscType, Disc> = {
-  putter: disc('putter', 7.5, 25, 0.65, 0.75, 1.6),
+  putter: disc('putter', 4, 25, 0.65, 0.75, 1.6),
   midrange: disc('midrange', 12, 55, 1, 1, 1),
   driver: disc('driver', 20, 75, 1.25, 1.3, 0.55),
 };

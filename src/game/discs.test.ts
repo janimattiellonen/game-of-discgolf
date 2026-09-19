@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GIMME_R } from './constants';
 import { DISCS, DISC_TYPES, REF_D, effort } from './discs';
 import { m } from './scale';
 
@@ -38,7 +39,19 @@ describe('the disc table', () => {
     expect(DISCS.midrange.grip).toBe(1);
   });
 
+  /**
+   * The tap-in circle and the softest throw in the bag are the same distance, which is the
+   * rule GIMME_R was written for: inside the shortest possible throw there is no shot to
+   * play. Let them drift apart and the band between them has no legal shot in it - too far
+   * to tap in, closer than any disc can throw - so the player has to overshoot into the
+   * circle and tap in from there, paying a stroke they can neither avoid nor understand.
+   */
+  it('starts the putter exactly at the edge of the tap-in circle', () => {
+    expect(DISCS.putter.min).toBeCloseTo(GIMME_R, 10);
+  });
+
   it('authors the table in metres', () => {
+    expect(m(DISCS.putter.min)).toBeCloseTo(4, 6);
     expect(m(DISCS.putter.max)).toBeCloseTo(25, 6);
     expect(m(DISCS.midrange.max)).toBeCloseTo(55, 6);
     expect(m(DISCS.driver.max)).toBeCloseTo(75, 6);
