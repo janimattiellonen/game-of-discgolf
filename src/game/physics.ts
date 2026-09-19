@@ -14,19 +14,36 @@ import {
   SKID_DECEL,
   WATER_DECEL,
 } from './constants';
-import { BASKET, MAX_D, MIN_D, groundAt, heightAt, inGrid, isWater } from './course';
+import { BASKET, groundAt, heightAt, inGrid, isWater } from './course';
+import type { Disc } from './discs';
+import { effort } from './discs';
 import type { BasketEvent, Flight, SkidPath, Vec } from './types';
 
-export const throwDist = (p: number) => MIN_D + p * (MAX_D - MIN_D);
-export const sigA = (p: number) => SIG_A0 + p * (SIG_A1 - SIG_A0);
-export const sigD = (p: number, d: number) => d * (SIG_D0 + p * (SIG_D1 - SIG_D0));
+/** Where the power bar sits between this disc's softest and hardest throw. */
+export const throwDist = (disc: Disc, p: number) => disc.min + p * (disc.max - disc.min);
+
+/**
+ * Scatter is keyed to the DISTANCE of the throw, not to the power bar - see effort() in
+ * discs.ts for why keying it to the bar inverts the design. The disc's own multiplier is
+ * what separates the three at any given range.
+ */
+export const sigA = (disc: Disc, carry: number) =>
+  (SIG_A0 + effort(carry) * (SIG_A1 - SIG_A0)) * disc.control;
+
+export const sigD = (disc: Disc, carry: number) =>
+  carry * (SIG_D0 + effort(carry) * (SIG_D1 - SIG_D0)) * disc.spread;
 
 export const flightDur = (d: number) => DUR_BASE + d * DUR_PER_D;
 export const flightArc = (d: number) => Math.min(ARC_MAX, ARC_BASE + d * ARC_PER_D);
 
-/** Surface sets the deceleration: water grabs the disc almost at once, grass lets it run. */
-const decelAt = (x: number, y: number) =>
-  inGrid(x | 0, y | 0) && isWater(x | 0, y | 0) ? WATER_DECEL : SKID_DECEL;
+/**
+ * Surface sets the deceleration: water grabs the disc almost at once, grass lets it run.
+ * On grass the disc's own rim decides how hard it bites - a driver keeps going where a
+ * putter sits down. Water is not scaled by grip: it stops everything, and a driver skipping
+ * across a pond is not a feature.
+ */
+const decelAt = (disc: Disc, x: number, y: number) =>
+  inGrid(x | 0, y | 0) && isWater(x | 0, y | 0) ? WATER_DECEL : SKID_DECEL * disc.grip;
 
 /**
  * The descent angle matters as much as the speed: a disc dropping steeply plants, a flat
@@ -44,13 +61,13 @@ export function impactSpeed(d: number): number {
  * decelerated by whatever it is sliding over right now. A disc that runs off grass into
  * water stops just past the shoreline instead of gliding on across it.
  */
-export function skidPath(start: Vec, a: number, d: number): SkidPath {
+export function skidPath(start: Vec, a: number, d: number, disc: Disc): SkidPath {
   const dt = 1 / 120;
   const samples = [0];
   let v = impactSpeed(d);
   let s = 0;
   while (v > 0 && samples.length < 600) {
-    v = Math.max(0, v - decelAt(start.x + Math.cos(a) * s, start.y + Math.sin(a) * s) * dt);
+    v = Math.max(0, v - decelAt(disc, start.x + Math.cos(a) * s, start.y + Math.sin(a) * s) * dt);
     s += v * dt;
     samples.push(s);
   }
@@ -58,8 +75,8 @@ export function skidPath(start: Vec, a: number, d: number): SkidPath {
 }
 
 /** Where a throw of carry d along angle a comes to rest, measured from the lie. */
-export const restDist = (lie: Vec, a: number, d: number) =>
-  d + skidPath({ x: lie.x + Math.cos(a) * d, y: lie.y + Math.sin(a) * d }, a, d).dist;
+export const restDist = (lie: Vec, a: number, d: number, disc: Disc) =>
+  d + skidPath({ x: lie.x + Math.cos(a) * d, y: lie.y + Math.sin(a) * d }, a, d, disc).dist;
 
 /**
  * Walk the whole path - carry then skid - and return the first moment the disc is inside

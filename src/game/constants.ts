@@ -1,7 +1,21 @@
 import { rad } from './math';
 
 // ---------------------------------------------------------------- scatter
-// Power sets distance AND scatter, so there is no "correct spot" on the bar.
+/**
+ * Power sets distance AND scatter, so there is no "correct spot" on the bar.
+ *
+ * That invariant is WEAKER now than it was, and deliberately so. Scatter is keyed to the
+ * distance of the throw rather than to the bar (see effort() in discs.ts), so a short disc
+ * spans a short stretch of this curve: a putter's whole bar runs 2.3 deg to 4.3 deg where a
+ * driver's runs 7.4 to 17.5. Risk lives primarily in WHICH DISC you pull now, and only
+ * secondarily in how hard you throw it; on a putter the last real gamble on the bar is the
+ * overcharge cliff.
+ *
+ * What the simulation then found is that the course puts the choice back: a driver at 80%
+ * power drowns about 30% of tee shots against about 52% at full power, and taps in more
+ * often. The bar still has a wrong end - the water decides it rather than this curve.
+ * Re-derive with `pnpm sim`.
+ */
 export const SIG_A0 = 3;
 export const SIG_A1 = 14; // degrees of angular scatter, at power 0 and 1
 export const SIG_D0 = 0.03;
@@ -32,6 +46,17 @@ export const POWER_MAX = 1.01;
 export const OVER_A = [1.4, 2.2] as const; // angle scatter multiplier
 export const OVER_D = [1.2, 2.0] as const; // distance scatter multiplier
 export const OVER_SHORT = [0.85, 0.8] as const; // carry left after a bust: 15-20% gone
+
+/**
+ * The flier. Maximum distance is soft, and soft UPWARDS only: roughly one clean throw in
+ * twelve gets away and carries 5-15% further than it should.
+ *
+ * sigD already lets a throw land long, but it is the constant hum of imprecision - the flier
+ * is the rare, nameable one the player tells a story about, which is why it is announced in
+ * the log rather than left to look like a bug.
+ */
+export const FLIER_P = 0.08;
+export const FLIER_GAIN = [1.05, 1.15] as const;
 
 // ---------------------------------------------------------------- flight shape
 /**
@@ -85,7 +110,16 @@ export const CATCH_SPEED = 6; // tiles/s, faster than this and it bounces out
  */
 
 /**
- * Inside the shortest possible throw (MIN_D) there is no shot to play: any throw
- * overshoots. That range is exactly where the tap-in button belongs.
+ * Inside the shortest possible throw there is no shot to play: any throw overshoots. That
+ * range is exactly where the tap-in button belongs.
+ *
+ * This is PAIRED WITH DISCS.putter.min and discs.test.ts asserts they stay equal. Move one
+ * without the other and you open a band with no legal shot in it - too far to tap in, closer
+ * than the softest disc in the bag can throw - where the player is forced to overshoot into
+ * the circle and tap in from there, paying a stroke they can neither avoid nor explain.
+ *
+ * It used to be 7.5 m, equal to the old MIN_D by coincidence of two unrelated constants. A
+ * bag breaks that coincidence, so both ends moved down together: at 4 m the 5-7 m putt is a
+ * shot the player stands over, which is what makes the putter a disc rather than a label.
  */
-export const GIMME_R = 1.5;
+export const GIMME_R = 0.8;

@@ -3,7 +3,6 @@ import {
   BASKET,
   GH,
   GW,
-  MAX_D,
   TEE,
   TEE_H,
   groundAt,
@@ -13,6 +12,7 @@ import {
   isTee,
   isWater,
 } from './course';
+import { DISCS } from './discs';
 import { classOf, tl } from './scale';
 
 describe('holeLength', () => {
@@ -29,8 +29,18 @@ describe('holeLength', () => {
     expect(classOf(holeLength())).toBe('recreational');
   });
 
-  it('is out of reach of a single full-power throw', () => {
-    expect(tl(holeLength())).toBeGreaterThan(MAX_D);
+  /**
+   * The hole's entire design premise: the pin cannot be reached off the tee, so the water is
+   * a decision rather than a formality. The margin used to be 28 m against a 55 m arm and is
+   * now 8 m against the driver - still out of reach, but this is the assertion that should
+   * fail loudly the day somebody bumps the driver to 85 m.
+   *
+   * Simulated against the three-disc model (`pnpm sim`), a full-power driver at the pin
+   * drowns about half the time for a tap-in rate under 2%, so the greedy line is worse than
+   * it was, not better.
+   */
+  it('is out of reach of the longest disc in the bag', () => {
+    expect(tl(holeLength())).toBeGreaterThan(DISCS.driver.max);
   });
 });
 

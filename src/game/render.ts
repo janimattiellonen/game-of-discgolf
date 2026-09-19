@@ -1,8 +1,9 @@
 import { CATCH_R, POWER_MAX } from './constants';
-import { BASKET, GH, GW, MAX_D, TEE, groundAt, heightAt, isTee, isWater } from './course';
+import { BASKET, GH, GW, TEE, groundAt, heightAt, isTee, isWater } from './course';
+import { DISCS } from './discs';
 import { rad } from './math';
 import { restDist, sigA, sigD, throwDist } from './physics';
-import { m } from './scale';
+import { m, tl } from './scale';
 import { aimBase } from './sim';
 import type { GameState, Vec } from './types';
 
@@ -81,10 +82,17 @@ function drawTile(cx: Ctx, s: GameState, tx: number, ty: number) {
   cx.stroke();
 }
 
+/**
+ * A fixed 10 m ruler. The SPACING never changes with the disc - a measuring aid whose units
+ * move when you swap disc is worse than none - but the COUNT does, so the rings stop where
+ * the disc in hand does rather than promising range it has not got.
+ */
 function drawRings(cx: Ctx, s: GameState) {
   if (!s.toggles.rings) return;
+  const n = Math.floor(m(DISCS[s.disc].max) / 10);
   cx.save();
-  for (const r of [2, 4, 6, 8]) {
+  for (let ring = 1; ring <= n; ring++) {
+    const r = tl(ring * 10);
     cx.beginPath();
     for (let i = 0; i <= 48; i++) {
       const a = (i / 48) * Math.PI * 2;
@@ -97,16 +105,17 @@ function drawRings(cx: Ctx, s: GameState) {
     const lp = proj(s.lie.x, s.lie.y + r, 0);
     cx.fillStyle = 'rgba(255,255,255,.3)';
     cx.font = '10px monospace';
-    cx.fillText(`${m(r)}m`, lp.x - 8, lp.y + 3);
+    cx.fillText(`${ring * 10}m`, lp.x - 8, lp.y + 3);
   }
   cx.restore();
 }
 
 /** The cone is the whole point of Q1: risk has to be visible BEFORE you commit. */
 function drawCone(cx: Ctx, s: GameState, p: number) {
-  const d0 = throwDist(p);
-  const sa = rad(sigA(p)) * 2;
-  const sd = sigD(p, d0) * 2;
+  const disc = DISCS[s.disc];
+  const d0 = throwDist(disc, p);
+  const sa = rad(sigA(disc, d0)) * 2;
+  const sd = sigD(disc, d0) * 2;
   // The cone must show where the disc COMES TO REST, skid included - otherwise the aid is
   // short by the slide length and the throw reads as the game cheating you. The skid is
   // surface-dependent, so it is resolved per angle: the far edge visibly pinches in over
@@ -116,7 +125,7 @@ function drawCone(cx: Ctx, s: GameState, p: number) {
   const N = 22;
   const edge = (i: number, carry: number) => {
     const a = s.lockedAngle - sa + (2 * sa * i) / N;
-    const r = restDist(s.lie, a, carry);
+    const r = restDist(s.lie, a, carry, disc);
     return proj(s.lie.x + Math.cos(a) * r, s.lie.y + Math.sin(a) * r, 0);
   };
   cx.beginPath();
@@ -134,7 +143,7 @@ function drawCone(cx: Ctx, s: GameState, p: number) {
   cx.fill();
   cx.strokeStyle = 'rgba(255,196,84,.55)';
   cx.stroke();
-  const md = restDist(s.lie, s.lockedAngle, d0);
+  const md = restDist(s.lie, s.lockedAngle, d0, disc);
   const mk = proj(
     s.lie.x + Math.cos(s.lockedAngle) * md,
     s.lie.y + Math.sin(s.lockedAngle) * md,
@@ -154,7 +163,7 @@ function drawAimLine(cx: Ctx, s: GameState) {
   cx.beginPath();
   for (let i = 0; i <= N; i++) {
     // follow the terrain, so it stays glued to the ground
-    const d = (MAX_D * i) / N;
+    const d = (DISCS[s.disc].max * i) / N;
     const x = s.lie.x + Math.cos(a) * d;
     const y = s.lie.y + Math.sin(a) * d;
     const p = proj(x, y, groundAt(x, y, s.toggles.elev));

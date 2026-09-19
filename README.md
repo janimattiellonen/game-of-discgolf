@@ -23,14 +23,16 @@ pnpm dev        # http://localhost:5173
 src/
   game/          # zero React imports - runs without a framework
     scale.ts     # TILE_M, metres <-> tiles, course classes
-    course.ts    # the hole: grid, tee, basket, terrain, player arm length
-    constants.ts # scatter, overcharge, skid and basket tuning
+    course.ts    # the hole: grid, tee, basket, terrain
+    discs.ts     # the bag: putter, midrange, driver, and the effort curve
+    constants.ts # scatter, overcharge, flier, skid and basket tuning
     math.ts      # vectors, gauss, clamp
     physics.ts   # flight, skid, basket cylinder, OB last-crossing
     sim.ts       # game state, phase machine, throw resolution
     render.ts    # draws to a CanvasRenderingContext2D it is handed
     index.ts     # createGame(canvas) - the public API
-  ui/            # React: panel, mode picker, tap-in button
+    montecarlo.test.ts  # `pnpm sim` - measures the tee shot, skipped by default
+  ui/            # React: panel, disc picker, mode picker, tap-in button
   styles/        # design tokens
 ```
 
@@ -41,7 +43,13 @@ rendering out of the frame budget. Live values that change every frame, like the
 are drawn on the canvas.
 
 `createGame(canvas)` returns `start`, `stop`, `subscribe`, `bindKeys`, `reset`, `tapIn`,
-`setMode` and `toggle`. Anything that can hand it a canvas can run the game.
+`setMode`, `setDisc` and `toggle`. Anything that can hand it a canvas can run the game.
+
+**How far the disc goes is a property of the disc**, not of the player and not of the course.
+`discs.ts` holds the bag as a data table authored in metres and derived to tiles, and scatter
+is keyed to the distance of the throw rather than to the power bar — with per-disc ranges the
+bar means different things on different discs, and keying scatter to it makes the driver the
+_accurate_ disc at short range.
 
 ## Styling
 

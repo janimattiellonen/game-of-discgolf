@@ -1,4 +1,6 @@
 import { BASKET, PAR, holeLength } from './course';
+import type { DiscType } from './discs';
+import { DISCS, DISC_KEYS, DISC_TYPES } from './discs';
 import { dist } from './math';
 import { sigA, sigD, throwDist } from './physics';
 import { render } from './render';
@@ -10,6 +12,7 @@ import {
   pressSpace,
   releaseSpace,
   reset,
+  setDisc,
   setMode,
   step,
   tapIn,
@@ -23,6 +26,11 @@ import type { AimMode, GameState, Phase, Toggles } from './types';
 export interface Snapshot {
   phase: Phase;
   mode: AimMode;
+  /**
+   * Which disc is in hand - the only part of it that changes. The table itself is static and
+   * is re-exported below for the picker to read, rather than republished at 10Hz.
+   */
+  disc: DiscType;
   holeMetres: number;
   holeClass: string;
   par: number;
@@ -42,11 +50,13 @@ export interface Snapshot {
 }
 
 function snapshot(s: GameState): Snapshot {
+  const disc = DISCS[s.disc];
   const p = s.phase === 'power' ? s.power : null;
   const hole = holeLength();
   return {
     phase: s.phase,
     mode: s.mode,
+    disc: s.disc,
     holeMetres: hole,
     holeClass: classOf(hole),
     par: PAR,
@@ -54,9 +64,9 @@ function snapshot(s: GameState): Snapshot {
     penalties: s.penalties,
     distance: m(dist(s.lie, BASKET)),
     power: p,
-    throwMetres: p === null ? null : m(throwDist(p)),
-    sigAngle: p === null ? null : sigA(p),
-    sigDistance: p === null ? null : m(sigD(p, throwDist(p))),
+    throwMetres: p === null ? null : m(throwDist(disc, p)),
+    sigAngle: p === null ? null : sigA(disc, throwDist(disc, p)),
+    sigDistance: p === null ? null : m(sigD(disc, throwDist(disc, p))),
     lastErr: s.lastErr,
     log: s.log,
     canTapIn: canTapIn(s),
@@ -75,6 +85,7 @@ export interface Game {
   reset(): void;
   tapIn(): void;
   setMode(mode: AimMode): void;
+  setDisc(disc: DiscType): void;
   toggle(aid: keyof Toggles): void;
 }
 
@@ -144,6 +155,11 @@ export function createGame(canvas: HTMLCanvasElement): Game {
           publish(performance.now(), true);
           return;
         }
+        // Above the manual-mode branch below, which ends in a return - anything after it
+        // would be a dead key in the mode most people play.
+        for (const type of DISC_TYPES) {
+          if (e.code === `Key${DISC_KEYS[type]}`) setDisc(state, type);
+        }
         if (e.code === 'Digit1') state.toggles.cone = !state.toggles.cone;
         if (e.code === 'Digit2') state.toggles.shadow = !state.toggles.shadow;
         if (e.code === 'Digit3') state.toggles.rings = !state.toggles.rings;
@@ -205,6 +221,11 @@ export function createGame(canvas: HTMLCanvasElement): Game {
       publish(performance.now(), true);
     },
 
+    setDisc(disc) {
+      setDisc(state, disc);
+      publish(performance.now(), true);
+    },
+
     toggle(aid) {
       state.toggles[aid] = !state.toggles[aid];
       publish(performance.now(), true);
@@ -213,4 +234,7 @@ export function createGame(canvas: HTMLCanvasElement): Game {
 }
 
 export type { AimMode, GameState, Phase, Toggles } from './types';
-export { TILE_M, TILE_DIAG_M } from './scale';
+export type { Disc, DiscType } from './discs';
+/** The disc table is static, so the picker reads it directly instead of via the Snapshot. */
+export { DISCS, DISC_KEYS, DISC_TYPES } from './discs';
+export { TILE_M, TILE_DIAG_M, m } from './scale';
