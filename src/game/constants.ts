@@ -125,15 +125,18 @@ export const CATCH_SPEED = 6; // tiles/s, faster than this and it bounces out
 export const GIMME_R = 0.8;
 
 /**
- * Inside the circle DRAWN around the basket, space holes out instead of charging - there
- * is no throw worth making from in there, only a misclick waiting to happen. It is the
- * catch radius by definition, not a second number near it, so the rule can never drift
- * away from the ring the player is aiming at.
+ * Inside that same circle, space holes out instead of charging - there is no throw worth
+ * making from in there, only a misclick waiting to happen.
  *
- * GIMME_R stays the range in which a tap-in is ALLOWED; this is the range in which it is
- * AUTOMATIC. The bag moved GIMME_R down to 0.8 to meet the putter's floor, so the band
- * where the player still chooses - putt it, or click the button - is 2.75-4 m and barely
- * a metre wide. Whether a choice that narrow earns its keep is an open question in the
- * spec, not something this constant decides quietly.
+ * It is GIMME_R by definition, not a second number near it. This used to be CATCH_R, on
+ * the argument that the rule should be tied to the ring the player can see, which left a
+ * 2.75-4 m band where the button was offered and the key was not. Scoring that band out
+ * killed it: a tap-in costs one stroke and always goes in, a throw costs one stroke and
+ * only might, so throwing anywhere inside GIMME_R is weakly dominated. There was never a
+ * choice in there to protect - only a slower way to take the same stroke. render.ts draws
+ * GIMME_R as a second ring so the armed range is still something the player can see.
+ *
+ * sim.test.ts pins the equality; discs.test.ts pins DISCS.putter.min to the other end of
+ * it.
  */
-export const AUTO_TAP_R = CATCH_R;
+export const AUTO_TAP_R = GIMME_R;

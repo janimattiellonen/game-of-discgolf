@@ -12,7 +12,7 @@ function lying(d: number, mode: AimMode = 'manual'): GameState {
   return s;
 }
 
-describe('pressSpace inside the basket circle', () => {
+describe('pressSpace inside the gimme circle', () => {
   it('holes out instead of charging, in manual mode', () => {
     const s = lying(AUTO_TAP_R * 0.5);
 
@@ -67,13 +67,15 @@ describe('pressSpace inside the basket circle', () => {
   });
 });
 
-describe('the two tap-in circles', () => {
+describe('the tap-in circle', () => {
   /**
-   * The automatic rule has to sit inside the allowed one, or space would hole out from a
-   * range where `tapIn()` refuses and the press would silently do nothing. The bag already
-   * moved GIMME_R once for reasons of its own; this is what catches the next move.
+   * The key and the button cover the same range: inside the gimme circle a throw is weakly
+   * dominated by the tap-in, so there is nothing to choose and no reason for the two to
+   * differ. Equality also carries the older, weaker invariant - space can never hole out
+   * from a range where `tapIn()` refuses and the press would silently do nothing. The bag
+   * already moved GIMME_R once for reasons of its own; this is what catches the next move.
    */
-  it('keeps the automatic circle inside the one the button allows', () => {
-    expect(AUTO_TAP_R).toBeLessThan(GIMME_R);
+  it('arms the key over exactly the range the button allows', () => {
+    expect(AUTO_TAP_R).toBe(GIMME_R);
   });
 });

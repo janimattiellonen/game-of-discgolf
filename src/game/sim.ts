@@ -84,9 +84,11 @@ export const aimBase = (s: GameState) => Math.atan2(BASKET.y - s.lie.y, BASKET.x
 export const canTapIn = (s: GameState) => s.phase === 'idle' && dist(s.lie, BASKET) <= GIMME_R;
 
 /**
- * Inside the basket circle there is nothing to aim at: the shortest throw in the arm still
- * overshoots. So space holes out rather than starting a charge, whatever the power would
- * have been. AUTO_TAP_R < GIMME_R, so this always satisfies canTapIn().
+ * Inside the gimme circle there is nothing to aim at: the shortest throw in the bag still
+ * overshoots, and a throw that might go in is never better than a tap-in that always does.
+ * So space holes out rather than starting a charge, whatever the power would have been.
+ * AUTO_TAP_R === GIMME_R, so this is canTapIn() over the same range, reached by key
+ * instead of by button.
  */
 export const autoTapIn = (s: GameState) => s.phase === 'idle' && dist(s.lie, BASKET) <= AUTO_TAP_R;
 
