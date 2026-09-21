@@ -30,7 +30,18 @@ describe('pressSpace inside the gimme circle', () => {
     expect(s.phase).toBe('done');
   });
 
-  it('charges as usual one hair outside the circle', () => {
+  /**
+   * The boundary pair, run in both modes, because the two modes take different branches of
+   * pressSpace: manual charges straight to `power`, timing starts the direction sweep at
+   * `dir`. A rule that swallowed the press in one mode and not the other would pass either
+   * test alone.
+   *
+   * Note what is NOT pinned here: the inclusive edge itself. `lying(AUTO_TAP_R)` does not
+   * sit ON the ring - 16.5 - 0.8 round-trips to 0.8000000000000007 tiles - so there is no
+   * state reachable through this helper that distinguishes `<=` from `<`, and a test that
+   * claimed to would only be pinning the sign of a float error.
+   */
+  it('charges as usual one hair outside the circle, in manual mode', () => {
     const s = lying(AUTO_TAP_R * 1.01);
 
     pressSpace(s, false);
@@ -39,8 +50,25 @@ describe('pressSpace inside the gimme circle', () => {
     expect(s.throws).toBe(0);
   });
 
-  it('holes out from the inside edge of the circle', () => {
+  it('starts the direction sweep one hair outside the circle, in timing mode', () => {
+    const s = lying(AUTO_TAP_R * 1.01, 'timing');
+
+    pressSpace(s, false);
+
+    expect(s.phase).toBe('dir');
+    expect(s.throws).toBe(0);
+  });
+
+  it('holes out from the inside edge of the circle, in manual mode', () => {
     const s = lying(AUTO_TAP_R * 0.999);
+
+    pressSpace(s, false);
+
+    expect(s.phase).toBe('done');
+  });
+
+  it('holes out from the inside edge of the circle, in timing mode', () => {
+    const s = lying(AUTO_TAP_R * 0.999, 'timing');
 
     pressSpace(s, false);
 

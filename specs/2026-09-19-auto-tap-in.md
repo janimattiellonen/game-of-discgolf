@@ -95,7 +95,15 @@ player is inside.
 
 `sim.test.ts` covers the rule at the boundary — just inside `AUTO_TAP_R` holes out, just
 outside it starts a charge — in both aiming modes, and pins that the auto tap-in counts a
-stroke and that it cannot fire mid-flight.
+stroke and that it cannot fire mid-flight. Both modes matter at the boundary because they
+take different branches of `pressSpace`: manual goes straight to `power`, timing starts
+the direction sweep at `dir`.
+
+The inclusive edge of `<=` is deliberately not pinned. A lie placed at `BASKET.x -
+AUTO_TAP_R` measures 0.8000000000000007 tiles away, not 0.8, so no state the tests can
+build actually sits on the ring — a test claiming to pin `<=` against `<` would be pinning
+the sign of a float error. The edge is measure-zero in play and the rule reads the same
+either way.
 
 It also pins `AUTO_TAP_R === GIMME_R`. That assertion used to read `<`, guarding the
 invariant that an auto tap-in always satisfies `canTapIn()`; equality is the stronger
