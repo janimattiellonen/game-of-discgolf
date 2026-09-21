@@ -1,10 +1,10 @@
-import { CATCH_R, POWER_MAX } from './constants';
+import { AUTO_TAP_R, CATCH_R, POWER_MAX } from './constants';
 import { BASKET, GH, GW, TEE, groundAt, heightAt, isTee, isWater } from './course';
 import { DISCS } from './discs';
 import { rad } from './math';
 import { restDist, sigA, sigD, throwDist } from './physics';
 import { m, tl } from './scale';
-import { aimBase } from './sim';
+import { aimBase, autoTapIn } from './sim';
 import type { GameState, Vec } from './types';
 
 // iso tile width/height, px per elevation unit
@@ -183,6 +183,19 @@ function drawMarker(cx: Ctx, s: GameState, pos: Vec, color: string, r: number) {
   cx.fill();
 }
 
+/** A circle on the ground at the basket, projected - the board is drawn in perspective. */
+function ring(cx: Ctx, r: number, h: number, stroke: string) {
+  cx.beginPath();
+  for (let i = 0; i <= 32; i++) {
+    const t = (i / 32) * Math.PI * 2;
+    const q = proj(BASKET.x + Math.cos(t) * r, BASKET.y + Math.sin(t) * r, h);
+    if (i) cx.lineTo(q.x, q.y);
+    else cx.moveTo(q.x, q.y);
+  }
+  cx.strokeStyle = stroke;
+  cx.stroke();
+}
+
 function drawBasket(cx: Ctx, s: GameState) {
   const h = s.toggles.elev ? heightAt(BASKET.x | 0, BASKET.y | 0) : 0;
   const p = proj(BASKET.x, BASKET.y, h);
@@ -190,15 +203,10 @@ function drawBasket(cx: Ctx, s: GameState) {
   cx.beginPath();
   cx.ellipse(p.x, p.y, 11, 5.5, 0, 0, 7);
   cx.fill();
-  cx.beginPath(); // the catch radius: what you are aiming at
-  for (let i = 0; i <= 32; i++) {
-    const t = (i / 32) * Math.PI * 2;
-    const q = proj(BASKET.x + Math.cos(t) * CATCH_R, BASKET.y + Math.sin(t) * CATCH_R, h);
-    if (i) cx.lineTo(q.x, q.y);
-    else cx.moveTo(q.x, q.y);
-  }
-  cx.strokeStyle = 'rgba(232,237,244,.35)';
-  cx.stroke();
+  // Two rings, outer first so the brighter one lands on top where they crowd: AUTO_TAP_R
+  // is where space holes out, CATCH_R is what a flying disc has to pass through.
+  ring(cx, AUTO_TAP_R, h, 'rgba(232,237,244,.18)');
+  ring(cx, CATCH_R, h, 'rgba(232,237,244,.35)');
   cx.strokeStyle = '#cfd6e0';
   cx.lineWidth = 2;
   cx.beginPath();
@@ -319,6 +327,7 @@ function drawBars(cx: Ctx, s: GameState, height: number) {
 
 function prompt(s: GameState): string {
   if (s.phase === 'done') return 'holed out - R to reset';
+  if (autoTapIn(s)) return 'space to tap in';
   if (s.mode === 'manual') {
     if (s.phase === 'power') {
       return 'POWER - release before 100% or the throw is blown (esc to cancel)';
