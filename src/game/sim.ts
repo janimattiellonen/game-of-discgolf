@@ -208,7 +208,7 @@ function land(s: GameState): void {
     say(
       s,
       `Landed ${m(dd).toFixed(1)} m from the basket.` +
-        (dd <= GIMME_R ? ' Close enough to tap in.' : ''),
+        (dd <= GIMME_R ? ' Close enough to tap in: space holes out.' : ''),
     );
   }
   s.flight = null;

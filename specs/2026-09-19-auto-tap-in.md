@@ -91,6 +91,10 @@ The canvas prompt under the power bar still reads `space to tap in` whenever the
 armed, in place of the aiming hint. The ring says where; the prompt confirms it once the
 player is inside.
 
+The landing line in the log names the key too — `Close enough to tap in: space holes out.`
+It used to end at "tap in", which was accurate while the button was the only path and
+points at one of two now.
+
 ## Test Notes
 
 `sim.test.ts` covers the rule at the boundary — just inside `AUTO_TAP_R` holes out, just
