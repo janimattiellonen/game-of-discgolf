@@ -4,7 +4,7 @@ import { DISCS } from './discs';
 import { rad } from './math';
 import { restDist, sigA, sigD, throwDist } from './physics';
 import { m, tl } from './scale';
-import { aimBase } from './sim';
+import { aimBase, autoTapIn } from './sim';
 import type { GameState, Vec } from './types';
 
 // iso tile width/height, px per elevation unit
@@ -319,6 +319,7 @@ function drawBars(cx: Ctx, s: GameState, height: number) {
 
 function prompt(s: GameState): string {
   if (s.phase === 'done') return 'holed out - R to reset';
+  if (autoTapIn(s)) return 'space to tap in';
   if (s.mode === 'manual') {
     if (s.phase === 'power') {
       return 'POWER - release before 100% or the throw is blown (esc to cancel)';

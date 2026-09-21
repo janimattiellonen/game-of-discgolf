@@ -1,4 +1,5 @@
 import {
+  AUTO_TAP_R,
   CATCH_SPEED,
   CHARGE_TIME,
   FLIER_P,
@@ -81,6 +82,13 @@ export const aimBase = (s: GameState) => Math.atan2(BASKET.y - s.lie.y, BASKET.x
 
 /** Close enough to walk up and drop it in. */
 export const canTapIn = (s: GameState) => s.phase === 'idle' && dist(s.lie, BASKET) <= GIMME_R;
+
+/**
+ * Inside the basket circle there is nothing to aim at: the shortest throw in the arm still
+ * overshoots. So space holes out rather than starting a charge, whatever the power would
+ * have been. AUTO_TAP_R < GIMME_R, so this always satisfies canTapIn().
+ */
+export const autoTapIn = (s: GameState) => s.phase === 'idle' && dist(s.lie, BASKET) <= AUTO_TAP_R;
 
 // ---------------------------------------------------------------- flight
 
@@ -242,6 +250,10 @@ export function setDisc(s: GameState, disc: DiscType): void {
 }
 
 export function pressSpace(s: GameState, repeat: boolean): void {
+  if (autoTapIn(s)) {
+    if (!repeat) tapIn(s);
+    return;
+  }
   if (s.mode === 'manual') {
     // Key repeat fires while it is held down; only the first press starts the charge.
     if (!repeat && s.phase === 'idle') {

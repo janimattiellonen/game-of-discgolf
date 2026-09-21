@@ -123,3 +123,17 @@ export const CATCH_SPEED = 6; // tiles/s, faster than this and it bounces out
  * shot the player stands over, which is what makes the putter a disc rather than a label.
  */
 export const GIMME_R = 0.8;
+
+/**
+ * Inside the circle DRAWN around the basket, space holes out instead of charging - there
+ * is no throw worth making from in there, only a misclick waiting to happen. It is the
+ * catch radius by definition, not a second number near it, so the rule can never drift
+ * away from the ring the player is aiming at.
+ *
+ * GIMME_R stays the range in which a tap-in is ALLOWED; this is the range in which it is
+ * AUTOMATIC. The bag moved GIMME_R down to 0.8 to meet the putter's floor, so the band
+ * where the player still chooses - putt it, or click the button - is 2.75-4 m and barely
+ * a metre wide. Whether a choice that narrow earns its keep is an open question in the
+ * spec, not something this constant decides quietly.
+ */
+export const AUTO_TAP_R = CATCH_R;
